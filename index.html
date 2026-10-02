@@ -85,9 +85,14 @@ td input.year.changed{border-color:var(--warn);color:var(--warn)}
 .grid{display:grid;grid-template-columns:repeat(3,65mm);grid-template-rows:repeat(4,65mm)}
 .card{width:65mm;height:65mm;border:.2mm dashed #bbb;display:flex;align-items:center;justify-content:center;-webkit-print-color-adjust:exact;print-color-adjust:exact;overflow:hidden}
 .card.front{background:#fff}
-.card.front .ring{width:56mm;height:56mm;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2.2mm solid var(--c)}
+.card.front .ring{width:56mm;height:56mm;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2.2mm solid var(--c);background:#fff}
 .card.front .ring svg{width:34mm;height:34mm;display:block}
 .card.back{flex-direction:column;justify-content:space-between;padding:5mm 4mm;text-align:center;color:#fff;background:var(--c)}
+.card.back.framed{box-shadow:inset 0 0 0 2.5mm #fff,inset 0 0 0 3.1mm #111}
+.card.back .dec{font:700 8pt/1 system-ui,sans-serif;letter-spacing:.5mm;opacity:.75;margin-top:1mm}
+#cardPreview .card{zoom:.62;border-style:solid;border-color:#555}
+.copt{display:flex;align-items:center;gap:6px}
+.copt input[type=color]{width:40px;height:30px;border:0;background:none;padding:0}
 .card.back .a{font:700 11pt/1.15 system-ui,sans-serif}
 .card.back .yr{font:900 34pt/1 system-ui,sans-serif}
 .card.back .t{font:italic 500 10pt/1.15 system-ui,sans-serif}
@@ -233,7 +238,34 @@ td input.year.changed{border-color:var(--warn);color:var(--warn)}
       </div>
 
       <div class="panel hidden" id="printPanel">
-        <h2>3. Print</h2>
+        <h2>3. Design &amp; print</h2>
+        <div class="field">
+          <label class="muted" for="cstyle">Card style</label>
+          <select id="cstyle">
+            <optgroup label="Color">
+              <option value="rainbow">Rainbow by year</option>
+              <option value="solid">One color</option>
+              <option value="gradient">Gradient</option>
+              <option value="image">My own image</option>
+            </optgroup>
+            <optgroup label="Greyscale printing">
+              <option value="gray">Grey shades by decade</option>
+              <option value="ink">Ink saver (white with black text)</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="row" id="cOpts" style="margin-bottom:12px">
+          <label class="muted copt" data-for="solid gradient image">Color <input type="color" id="c1" value="#7c3aed"></label>
+          <label class="muted copt" data-for="gradient">to <input type="color" id="c2" value="#ec4899"></label>
+          <label class="muted copt" data-for="image">Image <input type="file" id="cImg" accept="image/*" style="max-width:190px"></label>
+          <label class="muted copt" data-for="image"><input type="checkbox" id="cDim" checked> Darken image so text is readable</label>
+          <label class="muted copt" data-for="rainbow solid gradient image">Text
+            <select id="cText" class="inp" style="padding:6px"><option value="auto">Auto</option><option value="#ffffff">White</option><option value="#111111">Black</option></select>
+          </label>
+          <label class="muted copt" data-for="rainbow solid gradient image gray"><input type="checkbox" id="cFront"> Use the background on the QR side too</label>
+        </div>
+        <div class="muted" style="margin-bottom:6px">Preview (QR side · answer side)</div>
+        <div id="cardPreview" class="row" style="gap:12px;margin-bottom:14px"></div>
         <div class="row">
           <label class="muted" for="paper">Paper</label>
           <select id="paper" class="inp"><option value="A4">A4</option><option value="Letter">Letter</option></select>
@@ -590,6 +622,7 @@ $('#loadTracks').onclick = async () => {
     renderTable();
     $('#tracksPanel').classList.remove('hidden');
     $('#printPanel').classList.remove('hidden');
+    renderPreview();
   } catch(e){
     $('#loadState').textContent = '';
     showMsg('Could not load songs: ' + esc(e.message) + (e.status === 403 ? '. Spotify only allows reading playlists you own or collaborate on. Copy the songs into a playlist of your own and try again.' : ''));
@@ -663,15 +696,69 @@ $('#mbBtn').onclick = async () => {
 
 // ---------- printing ----------
 const COLS = 3, ROWS = 4, PER = COLS * ROWS;
-function colorFor(year){
-  const y = +year || 1990;
-  const hue = ((y - 1950) * 7 % 360 + 360) % 360;
-  return `hsl(${hue} 70% 38%)`;
-}
 function qrSvg(text){
   const q = qrcode(0, 'M'); q.addData(text); q.make();
   return q.createSvgTag(4, 0);
 }
+// ---------- card styles ----------
+const CS_KEYS = ['cstyle', 'c1', 'c2', 'cText', 'cDim', 'cFront'];
+let cardImg = store.get('card_img') || '';
+function lum(hex){ const n = parseInt(hex.slice(1), 16), c = [n >> 16, n >> 8 & 255, n & 255].map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; }
+const autoText = (...hexes) => hexes.reduce((a, h) => a + lum(h), 0) / hexes.length > .35 ? '#111111' : '#ffffff';
+function opt(id){ const el = $('#' + id); return el.type === 'checkbox' ? el.checked : el.value; }
+function cardStyle(year){
+  const s = opt('cstyle'), c1 = opt('c1'), c2 = opt('c2'), txt = opt('cText');
+  const y = +year || 1990, decade = Math.floor(y / 10) * 10;
+  let bg, fg, ring, cls = '', showDecade = false;
+  if (s === 'solid'){ bg = c1; fg = autoText(c1); ring = c1; }
+  else if (s === 'gradient'){ bg = `linear-gradient(135deg, ${c1}, ${c2})`; fg = autoText(c1, c2); ring = c1; }
+  else if (s === 'image'){
+    const dim = opt('cDim') ? 'linear-gradient(rgba(0,0,0,.45), rgba(0,0,0,.45)), ' : '';
+    bg = cardImg ? `${dim}url('${cardImg}') center/cover` : c1; fg = opt('cDim') || !cardImg ? '#ffffff' : '#111111'; ring = c1;
+  }
+  else if (s === 'gray'){
+    const shades = ['#ececec', '#d6d6d6', '#bfbfbf', '#a8a8a8'];          // light enough for black text on any printer
+    bg = shades[((decade - 1950) / 10 % 4 + 4) % 4]; fg = '#111111'; ring = '#111111'; showDecade = true;
+  }
+  else if (s === 'ink'){ bg = '#ffffff'; fg = '#111111'; ring = '#111111'; cls = ' framed'; }
+  else { bg = `hsl(${((y - 1950) * 7 % 360 + 360) % 360} 70% 38%)`; fg = '#ffffff'; ring = bg; }
+  if (txt !== 'auto' && !['gray', 'ink'].includes(s)) fg = txt;
+  const front = opt('cFront') && s !== 'ink' ? bg : '#ffffff';
+  return {bg, fg, ring, cls, front, decade: showDecade ? decade + 's' : ''};
+}
+function frontHtml(t, qr){
+  const st = cardStyle(yearOf(t));
+  return `<div class="card front" style="--c:${st.ring};background:${st.front}"><div class="ring">${qr}</div></div>`;
+}
+function backHtml(t){
+  const st = cardStyle(yearOf(t));
+  return `<div class="card back${st.cls}" style="background:${st.bg};color:${st.fg}"><div class="a">${esc(t.artist)}</div><div><div class="yr">${esc(yearOf(t))}</div>${st.decade ? `<div class="dec">${st.decade}</div>` : ''}</div><div class="t">${esc(cleanTitle(t.title) || t.title)}</div></div>`;
+}
+function renderPreview(){
+  $$('.copt').forEach(l => l.classList.toggle('hidden', !l.dataset.for.split(' ').includes(opt('cstyle'))));
+  const sample = tracks[0] || {id: '4uLU6hMCjMI75M1A2tKUQC', title: 'Never Gonna Give You Up', artist: 'Rick Astley', year: '1987'};
+  const sample2 = tracks.find(t => Math.abs((+yearOf(t)) - (+yearOf(sample))) >= 10) || {id: 'x', title: 'Billie Jean', artist: 'Michael Jackson', year: '1982'};
+  $('#cardPreview').innerHTML = frontHtml(sample, qrSvg(REDIRECT + '#t=' + sample.id)) + backHtml(sample) + backHtml(sample2);
+  CS_KEYS.forEach(k => store.set('cs_' + k, String(opt(k))));
+}
+CS_KEYS.forEach(k => {
+  const el = $('#' + k), v = store.get('cs_' + k);
+  if (v != null){ if (el.type === 'checkbox') el.checked = v === 'true'; else el.value = v; }
+  el.addEventListener('input', renderPreview); el.addEventListener('change', renderPreview);
+});
+$('#cImg').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const img = new Image();
+  img.onload = () => {   // shrink to keep the page light and storable
+    const k = Math.min(1, 900 / Math.max(img.width, img.height));
+    const c = document.createElement('canvas'); c.width = img.width * k; c.height = img.height * k;
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    cardImg = c.toDataURL('image/jpeg', .85); store.set('card_img', cardImg);
+    URL.revokeObjectURL(img.src); renderPreview();
+  };
+  img.src = URL.createObjectURL(f);
+};
+
 function buildPrint(list, paper){
   const base = REDIRECT;
   const [pw, ph] = paper === 'Letter' ? ['215.9mm', '279.4mm'] : ['210mm', '297mm'];
@@ -681,13 +768,13 @@ function buildPrint(list, paper){
     const fronts = [], backs = [];
     for (let i = 0; i < PER; i++){
       const t = chunk[i];
-      fronts.push(t ? `<div class="card front" style="--c:${colorFor(yearOf(t))}"><div class="ring">${qrSvg(base + '#t=' + t.id)}</div></div>` : '<div class="card empty"></div>');
+      fronts.push(t ? frontHtml(t, qrSvg(base + '#t=' + t.id)) : '<div class="card empty"></div>');
     }
     // backs: mirror each row horizontally (long-edge flip)
     for (let r = 0; r < ROWS; r++){
       for (let c = COLS - 1; c >= 0; c--){
         const t = chunk[r * COLS + c];
-        backs.push(t ? `<div class="card back" style="--c:${colorFor(yearOf(t))}"><div class="a">${esc(t.artist)}</div><div class="yr">${esc(yearOf(t))}</div><div class="t">${esc(cleanTitle(t.title) || t.title)}</div></div>` : '<div class="card empty"></div>');
+        backs.push(t ? backHtml(t) : '<div class="card empty"></div>');
       }
     }
     html += `<div class="page"><div class="grid">${fronts.join('')}</div></div><div class="page"><div class="grid">${backs.join('')}</div></div>`;
@@ -698,6 +785,7 @@ $('#paper').value = store.get('paper') || 'A4';
 $('#paper').onchange = e => store.set('paper', e.target.value);
 $('#printBtn').onclick = () => {
   if (!tracks.length) return;
+  if (opt('cstyle') === 'image' && !cardImg){ showMsg('Choose an image for the cards first.'); return; }
   buildPrint(tracks, $('#paper').value);
   setTimeout(() => window.print(), 100);
 };
@@ -729,7 +817,7 @@ $('#phoneQrClose').onclick = () => $('#phoneQr').classList.add('hidden');
 $('#phoneQr').onclick = e => { if (e.target.id === 'phoneQr') $('#phoneQr').classList.add('hidden'); };
 
 // expose for testing
-window.SongLine = {buildPrint, parseTrack, qrSvg, cleanTitle, setTracks: t => { tracks = t; renderTable(); }};
+window.SongLine = {buildPrint, parseTrack, qrSvg, cleanTitle, setTracks: t => { tracks = t; renderTable(); $('#tracksPanel').classList.remove('hidden'); $('#printPanel').classList.remove('hidden'); renderPreview(); }};
 
 // ---------- boot ----------
 (async () => {
