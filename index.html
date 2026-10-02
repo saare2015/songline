@@ -88,6 +88,9 @@ td input.year.changed{border-color:var(--warn);color:var(--warn)}
 .card.front .ring{width:56mm;height:56mm;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2.2mm solid var(--c);background:#fff}
 .card.front .ring svg{width:34mm;height:34mm;display:block}
 .card.back{flex-direction:column;justify-content:space-between;padding:5mm 4mm;text-align:center;color:#fff;background:var(--c)}
+.card.back{position:relative}
+.card.back .bgl{position:absolute;inset:0;filter:grayscale(1);z-index:0}
+.card.back > :not(.bgl){position:relative;z-index:1}
 .card.back.framed{box-shadow:inset 0 0 0 2.5mm #fff,inset 0 0 0 3.1mm #111}
 .card.back .dec{font:700 8pt/1 system-ui,sans-serif;letter-spacing:.5mm;opacity:.75;margin-top:1mm}
 #cardPreview .card{zoom:.62;border-style:solid;border-color:#555}
@@ -252,6 +255,7 @@ td input.year.changed{border-color:var(--warn);color:var(--warn)}
             <optgroup label="Greyscale printing">
               <option value="gray">Grey shades by decade</option>
               <option value="ink">Ink saver (white with black text)</option>
+              <option value="albumgray">Album cover, greyscale (light, saves ink)</option>
             </optgroup>
           </select>
         </div>
@@ -260,7 +264,7 @@ td input.year.changed{border-color:var(--warn);color:var(--warn)}
           <label class="muted copt" data-for="gradient">to <input type="color" id="c2" value="#ec4899"></label>
           <label class="muted copt" data-for="image">Image <input type="file" id="cImg" accept="image/*" style="max-width:190px"></label>
           <label class="muted copt" data-for="image album"><input type="checkbox" id="cDim" checked> Darken image so text is readable</label>
-          <span class="muted copt" data-for="album">The cover is printed on the answer side only, so it doesn't give the song away.</span>
+          <span class="muted copt" data-for="album albumgray">The cover is printed on the answer side only, so it doesn't give the song away.</span>
           <label class="muted copt" data-for="rainbow solid gradient image album">Text
             <select id="cText" class="inp" style="padding:6px"><option value="auto">Auto</option><option value="#ffffff">White</option><option value="#111111">Black</option></select>
           </label>
@@ -712,7 +716,7 @@ function cardStyle(t){
   const year = yearOf(t);
   const s = opt('cstyle'), c1 = opt('c1'), c2 = opt('c2'), txt = opt('cText');
   const y = +year || 1990, decade = Math.floor(y / 10) * 10;
-  let bg, fg, ring, cls = '', showDecade = false;
+  let bg, fg, ring, cls = '', showDecade = false, layer = '';
   if (s === 'solid'){ bg = c1; fg = autoText(c1); ring = c1; }
   else if (s === 'gradient'){ bg = `linear-gradient(135deg, ${c1}, ${c2})`; fg = autoText(c1, c2); ring = c1; }
   else if (s === 'image'){
@@ -724,6 +728,11 @@ function cardStyle(t){
     const dim = opt('cDim') ? 'linear-gradient(rgba(0,0,0,.45), rgba(0,0,0,.45)), ' : '';
     bg = ok ? `${dim}url('${t.cover}') center/cover` : c1; fg = opt('cDim') || !ok ? '#ffffff' : '#111111'; ring = c1;
   }
+  else if (s === 'albumgray'){
+    const ok = /^https:\/\/[^'"()\s]+$/.test(t.cover || '');
+    bg = '#ffffff'; fg = '#111111'; ring = '#111111';
+    if (ok) layer = `linear-gradient(rgba(255,255,255,.62), rgba(255,255,255,.62)), url('${t.cover}') center/cover`;
+  }
   else if (s === 'gray'){
     const shades = ['#ececec', '#d6d6d6', '#bfbfbf', '#a8a8a8'];          // light enough for black text on any printer
     bg = shades[((decade - 1950) / 10 % 4 + 4) % 4]; fg = '#111111'; ring = '#111111'; showDecade = true;
@@ -731,8 +740,8 @@ function cardStyle(t){
   else if (s === 'ink'){ bg = '#ffffff'; fg = '#111111'; ring = '#111111'; cls = ' framed'; }
   else { bg = `hsl(${((y - 1950) * 7 % 360 + 360) % 360} 70% 38%)`; fg = '#ffffff'; ring = bg; }
   if (txt !== 'auto' && !['gray', 'ink'].includes(s)) fg = txt;
-  const front = opt('cFront') && !['ink', 'album'].includes(s) ? bg : '#ffffff';   // never put the cover on the QR side
-  return {bg, fg, ring, cls, front, decade: showDecade ? decade + 's' : ''};
+  const front = opt('cFront') && !['ink', 'album', 'albumgray'].includes(s) ? bg : '#ffffff';   // never put the cover on the QR side
+  return {bg, fg, ring, cls, front, layer, decade: showDecade ? decade + 's' : ''};
 }
 function frontHtml(t, qr){
   const st = cardStyle(t);
@@ -740,7 +749,7 @@ function frontHtml(t, qr){
 }
 function backHtml(t){
   const st = cardStyle(t);
-  return `<div class="card back${st.cls}" style="background:${st.bg};color:${st.fg}"><div class="a">${esc(t.artist)}</div><div><div class="yr">${esc(yearOf(t))}</div>${st.decade ? `<div class="dec">${st.decade}</div>` : ''}</div><div class="t">${esc(cleanTitle(t.title) || t.title)}</div></div>`;
+  return `<div class="card back${st.cls}" style="background:${st.bg};color:${st.fg}">${st.layer ? `<div class="bgl" style="background:${st.layer}"></div>` : ''}<div class="a">${esc(t.artist)}</div><div><div class="yr">${esc(yearOf(t))}</div>${st.decade ? `<div class="dec">${st.decade}</div>` : ''}</div><div class="t">${esc(cleanTitle(t.title) || t.title)}</div></div>`;
 }
 function renderPreview(){
   $$('.copt').forEach(l => l.classList.toggle('hidden', !l.dataset.for.split(' ').includes(opt('cstyle'))));
@@ -796,7 +805,7 @@ $('#printBtn').onclick = () => {
   if (opt('cstyle') === 'image' && !cardImg){ showMsg('Choose an image for the cards first.'); return; }
   buildPrint(tracks, $('#paper').value);
   // wait for album covers to download so they appear in the printout
-  const urls = opt('cstyle') === 'album' ? [...new Set(tracks.map(t => t.cover).filter(Boolean))] : [];
+  const urls = ['album', 'albumgray'].includes(opt('cstyle')) ? [...new Set(tracks.map(t => t.cover).filter(Boolean))] : [];
   if (urls.length) $('#printBtn').textContent = 'Loading covers…';
   Promise.race([
     Promise.all(urls.map(u => new Promise(res => { const i = new Image(); i.onload = i.onerror = res; i.src = u; }))),
