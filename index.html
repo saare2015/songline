@@ -73,6 +73,37 @@ td input.year.changed{border-color:var(--warn);color:var(--warn)}
 .qr-big{background:#fff;border-radius:14px;padding:16px;margin:0 auto;width:min(280px,100%)}
 .qr-big svg{width:100%;height:auto;display:block}
 
+/* game */
+body.game header, body.game #playSettings, body.game #testPanel, body.game #gameBtnRow{display:none!important}
+#gameBar{display:none}
+body.game #gameBar{display:flex}
+#gameBtnRow .btn{flex:1 1 auto;padding:10px 12px}
+.scorebar{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;margin-bottom:8px}
+.chip{flex:0 0 auto;background:#2c2742;border:2px solid transparent;border-radius:12px;padding:6px 10px;cursor:pointer;color:var(--text);text-align:left;font:inherit}
+.chip.turn{border-color:var(--accent);background:#3a1f35}
+.chip b{display:block;font-size:14px}
+.chip span{font-size:13px;color:var(--muted);white-space:nowrap}
+.turnline{font-size:24px;font-weight:800}
+.warnbox{background:#3a2a0d;color:#ffd98a;border-radius:10px;padding:8px 12px;font-size:14px}
+.judge{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;max-width:420px}
+.btn.ok{background:#15803d}.btn.bad{background:#b91c1c}
+.modal-box{max-height:88vh;overflow:auto}
+.modal-box.wide{max-width:440px;text-align:left}
+.prow{display:flex;gap:6px;margin-bottom:6px}
+.prow input{flex:1;background:#120f1c;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:10px}
+.num{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0}
+.num .ctr{display:flex;align-items:center;gap:10px}
+.num .ctr b{min-width:32px;text-align:center;font-size:22px}
+.num .ctr button{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:#2c2742;color:var(--text);font-size:22px;cursor:pointer}
+.hist{list-style:none;padding:0;margin:0}
+.hist li{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.hist li .y{font-weight:800;color:var(--accent2);min-width:44px}
+.tag{font-size:11px;border-radius:6px;padding:1px 6px;margin-left:6px;white-space:nowrap}
+.tag.dup{background:#3a2a0d;color:#ffd98a}
+.tag.pr{background:#0f2e22;color:#86efac}
+tr.isdup td{background:rgba(251,191,36,.06)}
+.linkbtn{background:none;border:0;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:13px;padding:0}
+
 /* print */
 #print{display:none}
 @media print{
@@ -82,23 +113,25 @@ td input.year.changed{border-color:var(--warn);color:var(--warn)}
   .page{position:relative;overflow:hidden;page-break-after:always;break-after:page;display:flex;align-items:center;justify-content:center}
   .page:last-child{page-break-after:auto;break-after:auto}
 }
-.grid{display:grid;grid-template-columns:repeat(3,65mm);grid-template-rows:repeat(4,65mm)}
-.card{width:65mm;height:65mm;border:.2mm dashed #bbb;display:flex;align-items:center;justify-content:center;-webkit-print-color-adjust:exact;print-color-adjust:exact;overflow:hidden}
+.sheet{position:relative}
+.grid{display:grid}
+.card{--k:1;width:calc(65mm*var(--k));height:calc(65mm*var(--k));border:.2mm dashed #bbb;display:flex;align-items:center;justify-content:center;-webkit-print-color-adjust:exact;print-color-adjust:exact;overflow:hidden}
+.nolines .card{border-color:transparent}
+.cm{position:absolute;background:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .card.front{background:#fff}
-.card.front .ring{width:56mm;height:56mm;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2.2mm solid var(--c);background:#fff}
-.card.front .ring svg{width:34mm;height:34mm;display:block}
-.card.back{flex-direction:column;justify-content:space-between;padding:5mm 4mm;text-align:center;color:#fff;background:var(--c)}
-.card.back{position:relative}
+.card.front .ring{width:calc(56mm*var(--k));height:calc(56mm*var(--k));border-radius:50%;display:flex;align-items:center;justify-content:center;border:calc(2.2mm*var(--k)) solid var(--c);background:#fff}
+.card.front .ring svg{width:calc(34mm*var(--k));height:calc(34mm*var(--k));display:block}
+.card.back{flex-direction:column;justify-content:space-between;padding:calc(5mm*var(--k)) calc(4mm*var(--k));text-align:center;color:#fff;background:var(--c);position:relative}
 .card.back .bgl{position:absolute;inset:0;filter:grayscale(1);z-index:0}
 .card.back > :not(.bgl){position:relative;z-index:1}
-.card.back.framed{box-shadow:inset 0 0 0 2.5mm #fff,inset 0 0 0 3.1mm #111}
-.card.back .dec{font:700 8pt/1 system-ui,sans-serif;letter-spacing:.5mm;opacity:.75;margin-top:1mm}
+.card.back.framed{box-shadow:inset 0 0 0 calc(2.5mm*var(--k)) #fff,inset 0 0 0 calc(3.1mm*var(--k)) #111}
+.card.back .dec{font:700 calc(8pt*var(--k))/1 system-ui,sans-serif;letter-spacing:.5mm;opacity:.75;margin-top:1mm}
 #cardPreview .card{zoom:.62;border-style:solid;border-color:#555}
-.copt{display:flex;align-items:center;gap:6px}
+.copt,.chk{display:flex;align-items:center;gap:6px}
 .copt input[type=color]{width:40px;height:30px;border:0;background:none;padding:0}
-.card.back .a{font:700 11pt/1.15 system-ui,sans-serif}
-.card.back .yr{font:900 34pt/1 system-ui,sans-serif}
-.card.back .t{font:italic 500 10pt/1.15 system-ui,sans-serif}
+.card.back .a{font:700 calc(11pt*var(--k))/1.15 system-ui,sans-serif}
+.card.back .yr{font:900 calc(34pt*var(--k))/1 system-ui,sans-serif}
+.card.back .t{font:italic 500 calc(10pt*var(--k))/1.15 system-ui,sans-serif}
 .card.empty{border-color:transparent;background:none}
 </style>
 </head>
@@ -147,7 +180,19 @@ td input.year.changed{border-color:var(--warn);color:var(--warn)}
     </div>
 
     <div id="playArea" class="hidden">
-      <div class="panel">
+      <div class="row" id="gameBtnRow" style="margin-bottom:12px">
+        <button class="btn secondary" id="playersBtn">👥 Players &amp; scores</button>
+        <button class="btn secondary" id="histBtn">📜 History</button>
+        <button class="btn" id="gameOn">🎮 Game mode</button>
+      </div>
+      <div class="row" id="gameBar" style="margin-bottom:8px">
+        <button class="btn ghost" id="histBtn2" style="padding:8px 12px">📜</button>
+        <button class="btn ghost" id="playersBtn2" style="padding:8px 12px">👥</button>
+        <span class="muted" id="awakeState" style="flex:1;text-align:center"></span>
+        <button class="btn ghost" id="gameOff" style="padding:8px 12px">✕ Exit</button>
+      </div>
+      <div class="scorebar hidden" id="scorebar"></div>
+      <div class="panel" id="playSettings">
         <div class="row">
           <label class="muted" for="device">Play on</label>
           <select id="device" class="inp" style="flex:1;min-width:160px"></select>
@@ -182,6 +227,7 @@ td input.year.changed{border-color:var(--warn);color:var(--warn)}
       </details>
 
       <div class="stage" id="stageIdle">
+        <div class="turnline hidden" id="turnLine"></div>
         <button class="btn big" id="scanBtn">📷 Scan a card</button>
         <p class="muted">Point the camera at a card's QR code.</p>
       </div>
@@ -193,9 +239,15 @@ td input.year.changed{border-color:var(--warn);color:var(--warn)}
 
       <div class="stage hidden" id="stagePlaying">
         <div class="eq" id="eq"><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="warnbox hidden" id="dupWarn">⚠ This card was already played this game.</div>
+        <div class="muted hidden" id="guesser"></div>
         <div class="mystery" id="mysteryTxt">Mystery song playing…</div>
         <div class="countdown hidden" id="countdown"></div>
         <div class="reveal hidden" id="reveal"></div>
+        <div class="judge hidden" id="judge">
+          <button class="btn ok" id="judgeOk">✅ Correct</button>
+          <button class="btn bad" id="judgeBad">❌ Wrong</button>
+        </div>
         <div class="controls">
           <button class="btn secondary" id="pauseBtn">⏸ Pause</button>
           <button class="btn secondary" id="replayBtn">↺ Replay</button>
@@ -210,16 +262,20 @@ td input.year.changed{border-color:var(--warn);color:var(--warn)}
   <section id="view-make" class="hidden">
     <div class="panel" id="loginPanel2">
       <h2>Connect Spotify</h2>
-      <p class="muted">Log in to load your playlists.</p>
-      <button class="btn" data-login>Log in with Spotify</button>
+      <p class="muted">Log in to load your playlists, or open a card list someone shared with you.</p>
+      <div class="row">
+        <button class="btn" data-login>Log in with Spotify</button>
+        <button class="btn ghost" data-import>📂 Open card list (CSV)</button>
+      </div>
     </div>
 
     <div id="makeArea" class="hidden">
-      <div class="panel">
+      <div class="panel" id="plPanel">
         <h2>1. Pick playlists</h2>
         <div class="pl-list" id="plList"><p class="muted" style="padding:10px">Loading…</p></div>
         <div class="row" style="margin-top:10px">
           <button class="btn" id="loadTracks">Load songs</button>
+          <button class="btn ghost" data-import>📂 Open card list (CSV)</button>
           <span class="muted" id="loadState"></span>
         </div>
       </div>
@@ -231,6 +287,11 @@ td input.year.changed{border-color:var(--warn);color:var(--warn)}
           <button class="btn secondary" id="mbBtn">Suggest original years</button>
           <button class="btn ghost hidden" id="mbApply">Apply all suggestions</button>
           <span class="muted" id="mbState"></span>
+        </div>
+        <div class="row" style="margin-bottom:10px">
+          <span class="muted" id="listStats"></span>
+          <button class="btn ghost hidden" id="dupRemove" style="padding:8px 12px">Remove duplicates</button>
+          <button class="btn ghost" id="exportCsv" style="padding:8px 12px;margin-left:auto">💾 Save card list (CSV)</button>
         </div>
         <div class="tbl-wrap">
           <table>
@@ -272,12 +333,35 @@ td input.year.changed{border-color:var(--warn);color:var(--warn)}
         </div>
         <div class="muted" style="margin-bottom:6px">Preview (QR side · answer side)</div>
         <div id="cardPreview" class="row" style="gap:12px;margin-bottom:14px"></div>
+        <div class="row" style="margin-bottom:10px">
+          <label class="muted" for="csize">Card size</label>
+          <select id="csize" class="inp">
+            <option value="48">Small · 4.8 cm (20 per page)</option>
+            <option value="65">Standard · 6.5 cm (12 per page)</option>
+            <option value="80">Large · 8 cm (6 per page)</option>
+          </select>
+        </div>
+        <div class="row" style="margin-bottom:10px">
+          <label class="muted chk"><input type="checkbox" id="cMarks" checked> Crop marks</label>
+          <label class="muted chk"><input type="checkbox" id="cLines" checked> Dashed cut lines</label>
+        </div>
+        <div class="row" style="margin-bottom:10px">
+          <label class="muted chk"><input type="checkbox" id="onlyNew"> Only print cards I haven't printed yet <b id="newCount" style="color:var(--text)"></b></label>
+          <button class="linkbtn" id="resetPrinted">reset printed list</button>
+        </div>
         <div class="row">
           <label class="muted" for="paper">Paper</label>
           <select id="paper" class="inp"><option value="A4">A4</option><option value="Letter">Letter</option></select>
           <button class="btn" id="printBtn">Print cards</button>
         </div>
         <p class="muted">In the print dialog: <b>scale 100%</b> (not "fit to page"), <b>margins none</b>, <b>double-sided, flip on long edge</b>, and turn on <b>background graphics</b>. Choose "Save as PDF" to get a PDF. Print one test sheet first to check the backs line up.</p>
+        <div class="msg info hidden" id="afterPrint">
+          Did the cards print OK?
+          <div class="row" style="margin-top:8px">
+            <button class="btn" id="markPrinted" style="padding:8px 14px">Yes, mark them as printed</button>
+            <button class="btn ghost" id="notPrinted" style="padding:8px 14px">Not now</button>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -293,6 +377,60 @@ td input.year.changed{border-color:var(--warn);color:var(--warn)}
   </div>
 </div>
 
+<div class="modal hidden" id="playersModal">
+  <div class="modal-box wide">
+    <h2 style="margin:0 0 4px">Players</h2>
+    <p class="muted" style="margin:0 0 12px">In turn order. Everyone starts with their first card already face up (counted as 1).</p>
+    <div id="pList"></div>
+    <button class="btn ghost" id="pAdd" style="padding:8px 12px">+ Add player</button>
+    <div class="num"><span>Cards to win</span><div class="ctr"><button data-n="target" data-d="-1">−</button><b id="nTarget"></b><button data-n="target" data-d="1">+</button></div></div>
+    <div class="num"><span>Starting tokens</span><div class="ctr"><button data-n="tokens" data-d="-1">−</button><b id="nTokens"></b><button data-n="tokens" data-d="1">+</button></div></div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn" id="pStart">Start new game</button>
+      <button class="btn secondary" id="pSave">Save (keep scores)</button>
+      <button class="btn ghost" id="pClose">Close</button>
+    </div>
+    <p class="muted" style="margin-bottom:0">Starting a new game resets scores, tokens and the played-songs history. To play without scores, remove all players.</p>
+  </div>
+</div>
+
+<div class="modal hidden" id="pEditModal">
+  <div class="modal-box">
+    <h2 style="margin:0 0 6px" id="peName"></h2>
+    <div class="num"><span>🃏 Cards</span><div class="ctr"><button data-pe="cards" data-d="-1">−</button><b id="peCards"></b><button data-pe="cards" data-d="1">+</button></div></div>
+    <div class="num"><span>🪙 Tokens</span><div class="ctr"><button data-pe="tokens" data-d="-1">−</button><b id="peTokens"></b><button data-pe="tokens" data-d="1">+</button></div></div>
+    <div class="row" style="justify-content:center;margin-top:12px">
+      <button class="btn secondary" id="peTurn">Make it their turn</button>
+      <button class="btn" id="peClose">Done</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal hidden" id="histModal">
+  <div class="modal-box wide">
+    <h2 style="margin:0 0 4px">Played this game</h2>
+    <p class="muted" style="margin:0 0 10px" id="histSub"></p>
+    <ol class="hist" id="histList"></ol>
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="histClose">Close</button>
+      <button class="btn ghost" id="histClear">Clear history</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal hidden" id="winModal">
+  <div class="modal-box">
+    <div style="font-size:64px">🏆</div>
+    <h2 style="margin:0 0 6px" id="winName"></h2>
+    <p class="muted" id="winSub"></p>
+    <div class="row" style="justify-content:center">
+      <button class="btn" id="winNew">New game</button>
+      <button class="btn ghost" id="winClose">Keep playing</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="importFile" accept=".csv,text/csv" class="hidden">
 <div id="print"></div>
 
 <script>
@@ -400,7 +538,9 @@ function updateAuthUI(){
   $('#loginPanel').classList.toggle('hidden', ok);
   $('#loginPanel2').classList.toggle('hidden', ok);
   $('#playArea').classList.toggle('hidden', !ok);
-  $('#makeArea').classList.toggle('hidden', !ok);
+  $('#makeArea').classList.toggle('hidden', !ok && !tracks.length);
+  $('#plPanel').classList.toggle('hidden', !ok);
+  $('#loginPanel2').classList.toggle('hidden', ok || tracks.length > 0);
   $('#authState').textContent = ok ? 'Logged in to Spotify.' : 'Not logged in.';
 }
 
@@ -432,10 +572,14 @@ $('#startAt').onchange = e => store.set('start_at', e.target.value);
 
 function stage(name){ ['Idle','Scan','Playing'].forEach(n => $('#stage'+n).classList.toggle('hidden', n !== name)); }
 
-async function playTrack(id){
+async function playTrack(id, fresh = false){
   currentTrack = id;
   showMsg('');
   $('#reveal').classList.add('hidden');
+  if (fresh){
+    roundJudged = false; revealedCurrent = false;
+    $('#dupWarn').classList.toggle('hidden', !game.history.some(h => h.id === id));
+  }
   const s = $('#startAt').value;
   const pos = s === 'rand' ? (20 + Math.floor(Math.random() * 40)) * 1000 : (+s) * 1000;
   const dev = $('#device').value;
@@ -447,6 +591,8 @@ async function playTrack(id){
       method: 'PUT', body: JSON.stringify({uris: ['spotify:track:' + id], position_ms: pos})
     });
     playing = true; setPauseUI(); stage('Playing');
+    if (fresh && !game.history.some(h => h.id === id)){ game.history.push({id, t: Date.now()}); saveGame(); }
+    renderScore();
     remaining = limitMs();
     showCountdown();
     if (isFinite(remaining)){
@@ -533,12 +679,155 @@ $('#revealBtn').onclick = async () => {
     const over = store.json('year_overrides', {});
     const year = over[currentTrack] || (t.album?.release_date || '').slice(0, 4);
     box.innerHTML = `<div class="y">${esc(year)}</div><div><b>${esc(t.name)}</b></div><div class="muted">${esc(t.artists.map(a => a.name).join(', '))}</div>`;
+    const h = game.history.find(h => h.id === currentTrack);
+    if (h){ Object.assign(h, {n: t.name, a: t.artists.map(a => a.name).join(', '), y: year}); saveGame(); }
   } catch(e){ box.innerHTML = '<span class="muted">Flip the card to see the answer.</span>'; }
   box.classList.remove('hidden');
+  revealedCurrent = true;
 };
 $('#scanBtn').onclick = startScan;
 $('#nextBtn').onclick = startScan;
 $('#cancelScan').onclick = () => { stopScan(); stage(currentTrack ? 'Playing' : 'Idle'); };
+
+// ---------- game: players, turns, history ----------
+let game = Object.assign({players: [], turn: 0, target: 10, tokens: 2, history: []}, store.json('game', {}));
+let roundJudged = true, revealedCurrent = true, editIdx = -1, draft = null;
+const saveGame = () => store.set('game', JSON.stringify(game));
+const cur = () => game.players[game.turn % Math.max(1, game.players.length)];
+const openM = id => $('#' + id).classList.remove('hidden');
+const closeM = id => $('#' + id).classList.add('hidden');
+$$('.modal').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.add('hidden'); }));
+
+function renderScore(){
+  const has = game.players.length > 0;
+  $('#scorebar').classList.toggle('hidden', !has);
+  $('#scorebar').innerHTML = game.players.map((p, i) =>
+    `<button class="chip ${i === game.turn ? 'turn' : ''}" data-p="${i}"><b>${esc(p.name)}</b><span>🃏 ${p.cards} · 🪙 ${p.tokens}</span></button>`).join('');
+  const c = cur();
+  $('#turnLine').classList.toggle('hidden', !has);
+  if (c) $('#turnLine').textContent = `🎯 ${c.name}'s turn`;
+  $('#guesser').classList.toggle('hidden', !has);
+  if (c) $('#guesser').textContent = `${c.name} is placing this card`;
+  $('#judge').classList.toggle('hidden', !has || roundJudged);
+  const turnChip = $('#scorebar .chip.turn'); if (turnChip) turnChip.scrollIntoView({block: 'nearest', inline: 'center'});
+}
+$('#scorebar').onclick = e => { const b = e.target.closest('[data-p]'); if (b){ editIdx = +b.dataset.p; renderPEdit(); openM('pEditModal'); } };
+
+async function judge(correct){
+  if (roundJudged || !game.players.length) return;
+  roundJudged = true; revealedCurrent = true;
+  const p = cur();
+  if (correct) p.cards++;
+  game.turn = (game.turn + 1) % game.players.length;
+  saveGame();
+  clearTimer(); playGen++;
+  if (playing){ playing = false; try { await api('/me/player/pause' + devQ(), {method: 'PUT'}); } catch(e){} }
+  stage('Idle'); renderScore();
+  if (correct && p.cards >= game.target){
+    $('#winName').textContent = `${p.name} wins!`;
+    $('#winSub').textContent = `${p.cards} cards in the timeline. Well played.`;
+    openM('winModal');
+  }
+}
+$('#judgeOk').onclick = () => judge(true);
+$('#judgeBad').onclick = () => judge(false);
+$('#winNew').onclick = () => { closeM('winModal'); openPlayers(); };
+$('#winClose').onclick = () => closeM('winModal');
+
+// players setup
+function openPlayers(){
+  draft = {names: game.players.map(p => p.name), target: game.target, tokens: game.tokens};
+  if (!draft.names.length) draft.names = ['', ''];
+  renderPlayers(); openM('playersModal');
+}
+function renderPlayers(){
+  $('#pList').innerHTML = draft.names.map((n, i) =>
+    `<div class="prow"><input data-pi="${i}" value="${esc(n)}" placeholder="Player ${i + 1}" maxlength="20"><button class="btn ghost" data-pdel="${i}" style="padding:8px 12px">✕</button></div>`).join('');
+  $('#nTarget').textContent = draft.target; $('#nTokens').textContent = draft.tokens;
+}
+$('#pList').addEventListener('input', e => { if (e.target.dataset.pi != null) draft.names[+e.target.dataset.pi] = e.target.value; });
+$('#pList').addEventListener('click', e => { const d = e.target.dataset.pdel; if (d != null){ draft.names.splice(+d, 1); renderPlayers(); } });
+$('#pAdd').onclick = () => { draft.names.push(''); renderPlayers(); const ins = $$('#pList input'); ins[ins.length - 1].focus(); };
+$$('[data-n]').forEach(b => b.onclick = () => {
+  const k = b.dataset.n, lim = k === 'target' ? [2, 50] : [0, 10];
+  draft[k] = Math.min(lim[1], Math.max(lim[0], draft[k] + +b.dataset.d)); renderPlayers();
+});
+$('#pStart').onclick = () => {
+  const names = draft.names.map(n => n.trim()).filter(Boolean);
+  game = {players: names.map(name => ({name, cards: 1, tokens: draft.tokens})), turn: 0, target: draft.target, tokens: draft.tokens, history: []};
+  saveGame(); roundJudged = true; closeM('playersModal'); stage('Idle'); renderScore();
+};
+$('#pSave').onclick = () => {
+  const names = draft.names.map(n => n.trim()).filter(Boolean);
+  game.players = names.map((name, i) => game.players[i] ? {...game.players[i], name} : {name, cards: 1, tokens: draft.tokens});
+  game.target = draft.target; game.tokens = draft.tokens;
+  if (game.turn >= game.players.length) game.turn = 0;
+  saveGame(); closeM('playersModal'); renderScore();
+};
+$('#pClose').onclick = () => closeM('playersModal');
+$('#playersBtn').onclick = openPlayers; $('#playersBtn2').onclick = openPlayers;
+
+// single player edit (tokens / cards / turn)
+function renderPEdit(){
+  const p = game.players[editIdx]; if (!p) return;
+  $('#peName').textContent = p.name; $('#peCards').textContent = p.cards; $('#peTokens').textContent = p.tokens;
+}
+$$('[data-pe]').forEach(b => b.onclick = () => {
+  const p = game.players[editIdx]; if (!p) return;
+  p[b.dataset.pe] = Math.max(0, p[b.dataset.pe] + +b.dataset.d);
+  saveGame(); renderPEdit(); renderScore();
+  if (b.dataset.pe === 'cards' && +b.dataset.d > 0 && p.cards >= game.target){
+    closeM('pEditModal'); $('#winName').textContent = `${p.name} wins!`; $('#winSub').textContent = `${p.cards} cards in the timeline. Well played.`; openM('winModal');
+  }
+});
+$('#peTurn').onclick = () => { game.turn = editIdx; saveGame(); renderScore(); closeM('pEditModal'); };
+$('#peClose').onclick = () => closeM('pEditModal');
+
+// history
+async function openHistory(){
+  openM('histModal');
+  const list = game.history;
+  $('#histSub').textContent = list.length ? `${list.length} song${list.length > 1 ? 's' : ''} so far` : 'No songs played yet.';
+  const draw = () => $('#histList').innerHTML = list.map((h, i) => {
+    const hide = h.id === currentTrack && !revealedCurrent;
+    return `<li><span class="y">${hide ? '🔒' : esc(h.y || '…')}</span><span>${hide ? '<i>Current song (hidden until revealed)</i>' : `<b>${esc(h.n || 'Loading…')}</b><br><span class="muted">${esc(h.a || '')}</span>`}</span></li>`;
+  }).reverse().join('');
+  draw();
+  const over = store.json('year_overrides', {});
+  for (const h of list){
+    if (h.n) continue;
+    try { const t = await api('/tracks/' + h.id); Object.assign(h, {n: t.name, a: t.artists.map(a => a.name).join(', '), y: over[h.id] || (t.album?.release_date || '').slice(0, 4)}); }
+    catch(e){ h.n = '(unknown song)'; }
+    draw();
+  }
+  saveGame();
+}
+$('#histBtn').onclick = openHistory; $('#histBtn2').onclick = openHistory;
+$('#histClose').onclick = () => closeM('histModal');
+$('#histClear').onclick = () => { game.history = []; saveGame(); openHistory(); };
+
+// game mode + keep screen awake
+let wakeLock = null;
+async function keepAwake(on){
+  try {
+    if (on && 'wakeLock' in navigator){ wakeLock = await navigator.wakeLock.request('screen'); $('#awakeState').textContent = '☀ screen stays on'; }
+    else if (!on && wakeLock){ await wakeLock.release(); wakeLock = null; }
+  } catch(e){ $('#awakeState').textContent = ''; }
+  if (on && !('wakeLock' in navigator)) $('#awakeState').textContent = '';
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && document.body.classList.contains('game')) keepAwake(true); });
+$('#gameOn').onclick = () => {
+  document.body.classList.add('game');
+  keepAwake(true);
+  const el = document.documentElement;
+  if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+  window.scrollTo(0, 0);
+};
+$('#gameOff').onclick = () => {
+  document.body.classList.remove('game');
+  keepAwake(false);
+  if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+};
 
 // ---------- QR scanning ----------
 let stream = null, scanTimer = null, detector = null;
@@ -576,7 +865,7 @@ async function startScan(){
       } catch(e){}
     }
     const id = text && parseTrack(text);
-    if (id){ if (navigator.vibrate) navigator.vibrate(60); stopScan(); playTrack(id); return; }
+    if (id){ if (navigator.vibrate) navigator.vibrate(60); stopScan(); playTrack(id, true); return; }
     scanTimer = setTimeout(tick, 150);
   };
   tick();
@@ -635,15 +924,83 @@ $('#loadTracks').onclick = async () => {
   }
 };
 
+const printed = () => new Set(store.json('printed', []));
+const dupKey = t => norm(cleanTitle(t.title) || t.title) + '|' + norm(t.firstArtist || t.artist.split(',')[0] || '');
+function dupGroups(){
+  const m = new Map();
+  tracks.forEach(t => { const k = dupKey(t); m.set(k, (m.get(k) || []).concat(t)); });
+  return [...m.values()].filter(g => g.length > 1);
+}
 function renderTable(){
-  const over = store.json('year_overrides', {});
+  const over = store.json('year_overrides', {}), pr = printed();
+  const dupIds = new Set(dupGroups().flat().map(t => t.id));
   $('#tbody').innerHTML = tracks.map((t, i) => {
     const s = suggestions[t.id];
     const sug = s && s !== yearOf(t) ? `<div class="sug" data-apply="${i}">use ${esc(s)}</div>` : '';
-    return `<tr><td><input class="year ${over[t.id] ? 'changed' : ''}" data-i="${i}" value="${esc(yearOf(t))}" inputmode="numeric" maxlength="4">${sug}</td><td>${esc(t.title)}</td><td class="muted">${esc(t.artist)}</td><td><button class="x" data-rm="${i}" title="Remove">×</button></td></tr>`;
+    const tags = (dupIds.has(t.id) ? '<span class="tag dup">duplicate?</span>' : '') + (pr.has(t.id) ? '<span class="tag pr">printed</span>' : '');
+    return `<tr class="${dupIds.has(t.id) ? 'isdup' : ''}"><td><input class="year ${over[t.id] ? 'changed' : ''}" data-i="${i}" value="${esc(yearOf(t))}" inputmode="numeric" maxlength="4">${sug}</td><td>${esc(t.title)}${tags}</td><td class="muted">${esc(t.artist)}</td><td><button class="x" data-rm="${i}" title="Remove">×</button></td></tr>`;
   }).join('');
   $('#mbApply').classList.toggle('hidden', !tracks.some(t => suggestions[t.id] && suggestions[t.id] !== yearOf(t)));
+  const groups = dupGroups(), extra = groups.reduce((a, g) => a + g.length - 1, 0);
+  const nNew = tracks.filter(t => !pr.has(t.id)).length;
+  $('#listStats').textContent = `${tracks.length} songs · ${nNew} not printed yet` + (extra ? ` · ${extra} possible duplicate${extra > 1 ? 's' : ''}` : '');
+  $('#dupRemove').classList.toggle('hidden', !extra);
+  $('#newCount').textContent = `(${nNew})`;
+  if (typeof renderPreview === 'function' && !$('#printPanel').classList.contains('hidden')) renderPreview();
 }
+$('#dupRemove').onclick = () => {
+  // keep the version with the earliest year (most likely the original), drop the rest
+  const drop = new Set();
+  dupGroups().forEach(g => { const keep = g.slice().sort((a, b) => (yearOf(a) || '9999').localeCompare(yearOf(b) || '9999'))[0]; g.forEach(t => { if (t !== keep) drop.add(t.id); }); });
+  tracks = tracks.filter(t => !drop.has(t.id)); renderTable();
+};
+
+// ---------- save / open card list (CSV) ----------
+const csvCell = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+$('#exportCsv').onclick = () => {
+  const rows = [['spotify_id', 'year', 'title', 'artist', 'cover']].concat(tracks.map(t => [t.id, yearOf(t), t.title, t.artist, t.cover || '']));
+  const blob = new Blob(['\ufeff' + rows.map(r => r.map(csvCell).join(',')).join('\r\n')], {type: 'text/csv'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'songline-cards.csv'; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+};
+function parseCSV(text){
+  text = text.replace(/^\ufeff/, '');
+  const first = text.split(/\r?\n/)[0], d = first.split(';').length > first.split(',').length ? ';' : ',';
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++){
+    const c = text[i];
+    if (q){ if (c === '"'){ if (text[i + 1] === '"'){ f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"') q = true;
+    else if (c === d){ row.push(f); f = ''; }
+    else if (c === '\n' || c === '\r'){ if (c === '\r' && text[i + 1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; }
+    else f += c;
+  }
+  if (f || row.length){ row.push(f); rows.push(row); }
+  return rows.filter(r => r.some(x => x.trim()));
+}
+$$('[data-import]').forEach(b => b.onclick = () => $('#importFile').click());
+$('#importFile').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  const rows = parseCSV(await f.text()); e.target.value = '';
+  const head = rows.shift().map(h => h.trim().toLowerCase());
+  const col = n => head.indexOf(n);
+  const iId = col('spotify_id') >= 0 ? col('spotify_id') : col('id');
+  if (iId < 0 || col('title') < 0){ showMsg('That file doesn\'t look like a SongLine card list (it needs spotify_id, year, title and artist columns).'); return; }
+  const o = store.json('year_overrides', {}), seen = new Set(tracks.map(t => t.id));
+  let added = 0;
+  for (const r of rows){
+    const id = (parseTrack(r[iId]) || r[iId] || '').trim();
+    if (!/^[A-Za-z0-9]{22}$/.test(id) || seen.has(id)) continue;
+    seen.add(id); delete o[id]; added++;
+    const artist = r[col('artist')] || '';
+    tracks.push({id, year: (r[col('year')] || '').trim(), title: r[col('title')] || '', artist, firstArtist: artist.split(',')[0].trim(), cover: col('cover') >= 0 ? (r[col('cover')] || '') : ''});
+  }
+  store.set('year_overrides', JSON.stringify(o));
+  showMsg(`Opened ${added} song${added === 1 ? '' : 's'} from ${esc(f.name)}.`, 'info');
+  $('#makeArea').classList.remove('hidden'); $('#loginPanel2').classList.add('hidden');
+  $('#tracksPanel').classList.remove('hidden'); $('#printPanel').classList.remove('hidden');
+  renderTable(); renderPreview();
+};
 function setYear(t, y){
   const o = store.json('year_overrides', {});
   if (y && y !== t.year) o[t.id] = y; else delete o[t.id];
@@ -701,7 +1058,6 @@ $('#mbBtn').onclick = async () => {
 };
 
 // ---------- printing ----------
-const COLS = 3, ROWS = 4, PER = COLS * ROWS;
 function qrSvg(text){
   const q = qrcode(0, 'M'); q.addData(text); q.make();
   return q.createSvgTag(4, 0);
@@ -776,10 +1132,29 @@ $('#cImg').onchange = e => {
   img.src = URL.createObjectURL(f);
 };
 
+const LAYOUT = {48: [4, 5], 65: [3, 4], 80: [2, 3]};
+['csize', 'cMarks', 'cLines', 'onlyNew'].forEach(k => {
+  const el = $('#' + k), v = store.get('pr_' + k);
+  if (v != null){ if (el.type === 'checkbox') el.checked = v === 'true'; else el.value = v; }
+  el.addEventListener('change', () => store.set('pr_' + k, String(opt(k))));
+});
+if (!LAYOUT[$('#csize').value]) $('#csize').value = '65';
 function buildPrint(list, paper){
   const base = REDIRECT;
+  const size = +$('#csize').value || 65, [COLS, ROWS] = LAYOUT[size] || LAYOUT[65], PER = COLS * ROWS, k = size / 65;
   const [pw, ph] = paper === 'Letter' ? ['215.9mm', '279.4mm'] : ['210mm', '297mm'];
-  let html = `<style>@page{size:${paper};margin:0}.page{width:${pw};height:${ph}}</style>`;
+  const W = COLS * size, H = ROWS * size, L = 5, G = 1.5;   // crop mark length & gap (mm)
+  let marks = '';
+  if (opt('cMarks')){
+    for (let i = 0; i <= COLS; i++){
+      marks += `<div class="cm" style="left:${i * size - .1}mm;top:${-G - L}mm;width:.2mm;height:${L}mm"></div><div class="cm" style="left:${i * size - .1}mm;top:${H + G}mm;width:.2mm;height:${L}mm"></div>`;
+    }
+    for (let j = 0; j <= ROWS; j++){
+      marks += `<div class="cm" style="top:${j * size - .1}mm;left:${-G - L}mm;height:.2mm;width:${L}mm"></div><div class="cm" style="top:${j * size - .1}mm;left:${W + G}mm;height:.2mm;width:${L}mm"></div>`;
+    }
+  }
+  const sheet = cells => `<div class="page"><div class="sheet" style="width:${W}mm;height:${H}mm"><div class="grid" style="grid-template-columns:repeat(${COLS},${size}mm);grid-template-rows:repeat(${ROWS},${size}mm)">${cells.join('')}</div>${marks}</div></div>`;
+  let html = `<style>@page{size:${paper};margin:0}.page{width:${pw};height:${ph}}#print .card{--k:${k}}</style>`;
   for (let p = 0; p < list.length; p += PER){
     const chunk = list.slice(p, p + PER);
     const fronts = [], backs = [];
@@ -794,24 +1169,36 @@ function buildPrint(list, paper){
         backs.push(t ? backHtml(t) : '<div class="card empty"></div>');
       }
     }
-    html += `<div class="page"><div class="grid">${fronts.join('')}</div></div><div class="page"><div class="grid">${backs.join('')}</div></div>`;
+    html += sheet(fronts) + sheet(backs);
   }
   $('#print').innerHTML = html;
+  $('#print').classList.toggle('nolines', !opt('cLines'));
 }
 $('#paper').value = store.get('paper') || 'A4';
 $('#paper').onchange = e => store.set('paper', e.target.value);
+let lastPrinted = [];
 $('#printBtn').onclick = () => {
   if (!tracks.length) return;
   if (opt('cstyle') === 'image' && !cardImg){ showMsg('Choose an image for the cards first.'); return; }
-  buildPrint(tracks, $('#paper').value);
+  const pr = printed();
+  const list = opt('onlyNew') ? tracks.filter(t => !pr.has(t.id)) : tracks;
+  if (!list.length){ showMsg('Every song in the list is already printed. Untick "Only print cards I haven\'t printed yet" to print them again.', 'info'); return; }
+  lastPrinted = list.map(t => t.id);
+  buildPrint(list, $('#paper').value);
   // wait for album covers to download so they appear in the printout
   const urls = ['album', 'albumgray'].includes(opt('cstyle')) ? [...new Set(tracks.map(t => t.cover).filter(Boolean))] : [];
   if (urls.length) $('#printBtn').textContent = 'Loading covers…';
   Promise.race([
     Promise.all(urls.map(u => new Promise(res => { const i = new Image(); i.onload = i.onerror = res; i.src = u; }))),
     sleep(20000)
-  ]).then(() => { $('#printBtn').textContent = 'Print cards'; setTimeout(() => window.print(), 150); });
+  ]).then(() => { $('#printBtn').textContent = 'Print cards'; setTimeout(() => { window.print(); $('#afterPrint').classList.remove('hidden'); }, 150); });
 };
+$('#markPrinted').onclick = () => {
+  const s = printed(); lastPrinted.forEach(id => s.add(id));
+  store.set('printed', JSON.stringify([...s])); $('#afterPrint').classList.add('hidden'); renderTable();
+};
+$('#notPrinted').onclick = () => $('#afterPrint').classList.add('hidden');
+$('#resetPrinted').onclick = () => { if (confirm('Forget which songs you have printed?')){ store.del('printed'); renderTable(); } };
 
 // ---------- open-on-phone QR ----------
 function showQr(url, title, sub, label){
@@ -840,18 +1227,25 @@ $('#phoneQrClose').onclick = () => $('#phoneQr').classList.add('hidden');
 $('#phoneQr').onclick = e => { if (e.target.id === 'phoneQr') $('#phoneQr').classList.add('hidden'); };
 
 // expose for testing
-window.SongLine = {buildPrint, parseTrack, qrSvg, cleanTitle, setTracks: t => { tracks = t; renderTable(); $('#tracksPanel').classList.remove('hidden'); $('#printPanel').classList.remove('hidden'); renderPreview(); }};
+window.SongLine = {buildPrint, parseTrack, qrSvg, cleanTitle, parseCSV, game: () => game, setTracks: t => { tracks = t; renderTable(); $('#tracksPanel').classList.remove('hidden'); $('#printPanel').classList.remove('hidden'); renderPreview(); }};
+
+// a card scanned with the phone's camera app can land in an already-open tab
+window.addEventListener('hashchange', () => {
+  const id = parseTrack(location.hash);
+  if (id && token()){ history.replaceState(null, '', REDIRECT); setView('play'); stopScan(); playTrack(id, true); }
+});
 
 // ---------- boot ----------
 (async () => {
   await handleRedirect();
   updateAuthUI();
+  renderScore();
   const v = store.get('view');
   setView(v && v !== 'settings' ? v : (clientId() ? 'play' : 'settings'));
   if (token()){
     await loadDevices();
     const id = parseTrack(location.hash);
-    if (id){ history.replaceState(null, '', REDIRECT); setView('play'); playTrack(id); }
+    if (id){ history.replaceState(null, '', REDIRECT); setView('play'); playTrack(id, true); }
   } else {
     const id = parseTrack(location.hash);
     if (id && clientId()) showMsg('Log in to Spotify first; after logging in, this card will play automatically.', 'info');
