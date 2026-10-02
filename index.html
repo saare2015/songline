@@ -98,6 +98,8 @@ body.game #gameBar{display:flex}
 .hist{list-style:none;padding:0;margin:0}
 .hist li{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
 .hist li .y{font-weight:800;color:var(--accent2);min-width:44px}
+.hist li .who{text-align:right;font-weight:700;white-space:nowrap}
+.hist li .res{font-size:18px}
 .tag{font-size:11px;border-radius:6px;padding:1px 6px;margin-left:6px;white-space:nowrap}
 .tag.dup{background:#3a2a0d;color:#ffd98a}
 .tag.pr{background:#0f2e22;color:#86efac}
@@ -591,7 +593,11 @@ async function playTrack(id, fresh = false){
       method: 'PUT', body: JSON.stringify({uris: ['spotify:track:' + id], position_ms: pos})
     });
     playing = true; setPauseUI(); stage('Playing');
-    if (fresh && !game.history.some(h => h.id === id)){ game.history.push({id, t: Date.now()}); saveGame(); }
+    if (fresh){
+      const known = game.history.find(h => h.id === id && h.n);       // reuse details if this song was played before
+      curEntry = {id, t: Date.now(), ...(cur() ? {p: cur().name} : {}), ...(known ? {n: known.n, a: known.a, y: known.y} : {})};
+      game.history.push(curEntry); saveGame();
+    }
     renderScore();
     remaining = limitMs();
     showCountdown();
@@ -679,8 +685,8 @@ $('#revealBtn').onclick = async () => {
     const over = store.json('year_overrides', {});
     const year = over[currentTrack] || (t.album?.release_date || '').slice(0, 4);
     box.innerHTML = `<div class="y">${esc(year)}</div><div><b>${esc(t.name)}</b></div><div class="muted">${esc(t.artists.map(a => a.name).join(', '))}</div>`;
-    const h = game.history.find(h => h.id === currentTrack);
-    if (h){ Object.assign(h, {n: t.name, a: t.artists.map(a => a.name).join(', '), y: year}); saveGame(); }
+    game.history.filter(h => h.id === currentTrack).forEach(h => Object.assign(h, {n: t.name, a: t.artists.map(a => a.name).join(', '), y: year}));
+    saveGame();
   } catch(e){ box.innerHTML = '<span class="muted">Flip the card to see the answer.</span>'; }
   box.classList.remove('hidden');
   revealedCurrent = true;
@@ -691,7 +697,7 @@ $('#cancelScan').onclick = () => { stopScan(); stage(currentTrack ? 'Playing' : 
 
 // ---------- game: players, turns, history ----------
 let game = Object.assign({players: [], turn: 0, target: 10, tokens: 2, history: []}, store.json('game', {}));
-let roundJudged = true, revealedCurrent = true, editIdx = -1, draft = null;
+let roundJudged = true, revealedCurrent = true, editIdx = -1, draft = null, curEntry = null;
 const saveGame = () => store.set('game', JSON.stringify(game));
 const cur = () => game.players[game.turn % Math.max(1, game.players.length)];
 const openM = id => $('#' + id).classList.remove('hidden');
@@ -718,6 +724,7 @@ async function judge(correct){
   roundJudged = true; revealedCurrent = true;
   const p = cur();
   if (correct) p.cards++;
+  if (curEntry){ curEntry.p = p.name; curEntry.r = correct ? 1 : 0; }
   game.turn = (game.turn + 1) % game.players.length;
   saveGame();
   clearTimer(); playGen++;
@@ -787,10 +794,13 @@ $('#peClose').onclick = () => closeM('pEditModal');
 async function openHistory(){
   openM('histModal');
   const list = game.history;
-  $('#histSub').textContent = list.length ? `${list.length} song${list.length > 1 ? 's' : ''} so far` : 'No songs played yet.';
+  const tally = game.players.map(p => { const mine = list.filter(h => h.p === p.name && h.r != null); return mine.length ? `${p.name} ${mine.filter(h => h.r === 1).length}/${mine.length}` : ''; }).filter(Boolean).join(' · ');
+  $('#histSub').textContent = list.length ? `${list.length} song${list.length > 1 ? 's' : ''} so far` + (tally ? ` · correct: ${tally}` : '') : 'No songs played yet.';
   const draw = () => $('#histList').innerHTML = list.map((h, i) => {
-    const hide = h.id === currentTrack && !revealedCurrent;
-    return `<li><span class="y">${hide ? '🔒' : esc(h.y || '…')}</span><span>${hide ? '<i>Current song (hidden until revealed)</i>' : `<b>${esc(h.n || 'Loading…')}</b><br><span class="muted">${esc(h.a || '')}</span>`}</span></li>`;
+    const hide = h === curEntry && !revealedCurrent;
+    const res = h.r === 1 ? '✅' : h.r === 0 ? '❌' : (h.p ? '…' : '');
+    const who = h.p ? `<span class="who">${esc(h.p)}<br><span class="res">${res}</span></span>` : '';
+    return `<li><span class="y">${hide ? '🔒' : esc(h.y || '…')}</span><span style="flex:1">${hide ? '<i>Current song (hidden until revealed)</i>' : `<b>${esc(h.n || 'Loading…')}</b><br><span class="muted">${esc(h.a || '')}</span>`}</span>${who}</li>`;
   }).reverse().join('');
   draw();
   const over = store.json('year_overrides', {});
