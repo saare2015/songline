@@ -66,11 +66,16 @@ td input.year.changed{border-color:var(--warn);color:var(--warn)}
 .x{background:none;border:0;color:var(--muted);cursor:pointer;font-size:18px}
 .sug{color:var(--warn);font-size:12px;cursor:pointer;text-decoration:underline}
 
+.modal{position:fixed;inset:0;background:rgba(10,8,18,.8);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+.modal-box{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:20px;text-align:center;max-width:360px;width:100%}
+.qr-big{background:#fff;border-radius:14px;padding:16px;margin:0 auto;width:min(280px,100%)}
+.qr-big svg{width:100%;height:auto;display:block}
+
 /* print */
 #print{display:none}
 @media print{
   html,body{background:#fff!important}
-  .app{display:none!important}
+  .app,.modal{display:none!important}
   #print{display:block}
   .page{position:relative;overflow:hidden;page-break-after:always;break-after:page;display:flex;align-items:center;justify-content:center}
   .page:last-child{page-break-after:auto;break-after:auto}
@@ -94,6 +99,7 @@ td input.year.changed{border-color:var(--warn);color:var(--warn)}
     <nav>
       <button class="tab on" data-view="play">Play</button>
       <button class="tab" data-view="make">Make cards</button>
+      <button class="icon-btn" id="phoneQrBtn" title="Open on your phone">📱</button>
       <button class="icon-btn" data-view="settings" title="Settings">⚙</button>
     </nav>
   </header>
@@ -147,6 +153,18 @@ td input.year.changed{border-color:var(--warn);color:var(--warn)}
         </div>
         <p class="muted" style="margin:8px 0 0">No device listed? Open the Spotify app on this phone, play any song for a second, then tap ↻.</p>
       </div>
+
+      <details class="panel" id="testPanel">
+        <summary style="cursor:pointer;font-weight:700">🧪 Test with one song</summary>
+        <p class="muted">Paste a Spotify song link (Share → Copy Song Link) to check that playback works, or show it as a card QR to test the scanner.</p>
+        <div class="field">
+          <input id="testUrl" placeholder="https://open.spotify.com/track/…" autocomplete="off" style="background:#120f1c;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:10px">
+        </div>
+        <div class="row">
+          <button class="btn" id="testPlay">▶ Play test song</button>
+          <button class="btn secondary" id="testQr">Show as card QR</button>
+        </div>
+      </details>
 
       <div class="stage" id="stageIdle">
         <button class="btn big" id="scanBtn">📷 Scan a card</button>
@@ -217,6 +235,16 @@ td input.year.changed{border-color:var(--warn);color:var(--warn)}
       </div>
     </div>
   </section>
+</div>
+
+<div class="modal hidden" id="phoneQr">
+  <div class="modal-box">
+    <h2 style="margin:0 0 4px" id="qrTitle">Open on your phone</h2>
+    <p class="muted" style="margin:0 0 12px" id="qrSub">Scan with your phone's camera.</p>
+    <div class="qr-big" id="phoneQrImg"></div>
+    <p><code id="phoneQrUrl"></code></p>
+    <button class="btn" id="phoneQrClose">Close</button>
+  </div>
 </div>
 
 <div id="print"></div>
@@ -597,6 +625,32 @@ $('#printBtn').onclick = () => {
   buildPrint(tracks, $('#paper').value);
   setTimeout(() => window.print(), 100);
 };
+
+// ---------- open-on-phone QR ----------
+function showQr(url, title, sub, label){
+  $('#qrTitle').textContent = title; $('#qrSub').textContent = sub;
+  $('#phoneQrImg').innerHTML = qrSvg(url);
+  $('#phoneQrUrl').textContent = label ?? url;
+  $('#phoneQr').classList.remove('hidden');
+}
+$('#phoneQrBtn').onclick = () => showQr(REDIRECT, 'Open on your phone', "Scan with your phone's camera.");
+
+// ---------- single test song ----------
+$('#testUrl').value = store.get('test_url') || '';
+function testId(){
+  const v = $('#testUrl').value.trim();
+  store.set('test_url', v);
+  const id = parseTrack(v);
+  if (!id) showMsg('That doesn\'t look like a Spotify song link. In Spotify: ⋯ → Share → Copy Song Link.');
+  return id;
+}
+$('#testPlay').onclick = () => { const id = testId(); if (id) playTrack(id); };
+$('#testQr').onclick = () => {
+  const id = testId(); if (!id) return;
+  showQr(REDIRECT + '#t=' + id, 'Test card', 'Scan this with your phone, using "Scan a card" on the site or the camera app.', 'Test song');
+};
+$('#phoneQrClose').onclick = () => $('#phoneQr').classList.add('hidden');
+$('#phoneQr').onclick = e => { if (e.target.id === 'phoneQr') $('#phoneQr').classList.add('hidden'); };
 
 // expose for testing
 window.SongLine = {buildPrint, parseTrack, qrSvg, cleanTitle, setTracks: t => { tracks = t; renderTable(); }};
