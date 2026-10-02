@@ -247,6 +247,7 @@ td input.year.changed{border-color:var(--warn);color:var(--warn)}
               <option value="solid">One color</option>
               <option value="gradient">Gradient</option>
               <option value="image">My own image</option>
+              <option value="album">Album cover</option>
             </optgroup>
             <optgroup label="Greyscale printing">
               <option value="gray">Grey shades by decade</option>
@@ -258,8 +259,9 @@ td input.year.changed{border-color:var(--warn);color:var(--warn)}
           <label class="muted copt" data-for="solid gradient image">Color <input type="color" id="c1" value="#7c3aed"></label>
           <label class="muted copt" data-for="gradient">to <input type="color" id="c2" value="#ec4899"></label>
           <label class="muted copt" data-for="image">Image <input type="file" id="cImg" accept="image/*" style="max-width:190px"></label>
-          <label class="muted copt" data-for="image"><input type="checkbox" id="cDim" checked> Darken image so text is readable</label>
-          <label class="muted copt" data-for="rainbow solid gradient image">Text
+          <label class="muted copt" data-for="image album"><input type="checkbox" id="cDim" checked> Darken image so text is readable</label>
+          <span class="muted copt" data-for="album">The cover is printed on the answer side only, so it doesn't give the song away.</span>
+          <label class="muted copt" data-for="rainbow solid gradient image album">Text
             <select id="cText" class="inp" style="padding:6px"><option value="auto">Auto</option><option value="#ffffff">White</option><option value="#111111">Black</option></select>
           </label>
           <label class="muted copt" data-for="rainbow solid gradient image gray"><input type="checkbox" id="cFront"> Use the background on the QR side too</label>
@@ -612,7 +614,7 @@ $('#loadTracks').onclick = async () => {
           const t = it.item || it.track;
           if (!t || t.is_local || (t.type && t.type !== 'track') || !t.id || seen.has(t.id)) continue;
           seen.add(t.id);
-          tracks.push({id: t.id, title: t.name, artist: (t.artists || []).map(a => a.name).join(', '), firstArtist: t.artists?.[0]?.name || '', year: (t.album?.release_date || '').slice(0, 4)});
+          tracks.push({id: t.id, title: t.name, artist: (t.artists || []).map(a => a.name).join(', '), firstArtist: t.artists?.[0]?.name || '', year: (t.album?.release_date || '').slice(0, 4), cover: (t.album?.images || [])[0]?.url || ''});
         }
         url = d.next;
         $('#loadState').textContent = `Loading… ${tracks.length} songs`;
@@ -706,7 +708,8 @@ let cardImg = store.get('card_img') || '';
 function lum(hex){ const n = parseInt(hex.slice(1), 16), c = [n >> 16, n >> 8 & 255, n & 255].map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; }
 const autoText = (...hexes) => hexes.reduce((a, h) => a + lum(h), 0) / hexes.length > .35 ? '#111111' : '#ffffff';
 function opt(id){ const el = $('#' + id); return el.type === 'checkbox' ? el.checked : el.value; }
-function cardStyle(year){
+function cardStyle(t){
+  const year = yearOf(t);
   const s = opt('cstyle'), c1 = opt('c1'), c2 = opt('c2'), txt = opt('cText');
   const y = +year || 1990, decade = Math.floor(y / 10) * 10;
   let bg, fg, ring, cls = '', showDecade = false;
@@ -716,6 +719,11 @@ function cardStyle(year){
     const dim = opt('cDim') ? 'linear-gradient(rgba(0,0,0,.45), rgba(0,0,0,.45)), ' : '';
     bg = cardImg ? `${dim}url('${cardImg}') center/cover` : c1; fg = opt('cDim') || !cardImg ? '#ffffff' : '#111111'; ring = c1;
   }
+  else if (s === 'album'){
+    const ok = /^https:\/\/[^'"()\s]+$/.test(t.cover || '');
+    const dim = opt('cDim') ? 'linear-gradient(rgba(0,0,0,.45), rgba(0,0,0,.45)), ' : '';
+    bg = ok ? `${dim}url('${t.cover}') center/cover` : c1; fg = opt('cDim') || !ok ? '#ffffff' : '#111111'; ring = c1;
+  }
   else if (s === 'gray'){
     const shades = ['#ececec', '#d6d6d6', '#bfbfbf', '#a8a8a8'];          // light enough for black text on any printer
     bg = shades[((decade - 1950) / 10 % 4 + 4) % 4]; fg = '#111111'; ring = '#111111'; showDecade = true;
@@ -723,20 +731,20 @@ function cardStyle(year){
   else if (s === 'ink'){ bg = '#ffffff'; fg = '#111111'; ring = '#111111'; cls = ' framed'; }
   else { bg = `hsl(${((y - 1950) * 7 % 360 + 360) % 360} 70% 38%)`; fg = '#ffffff'; ring = bg; }
   if (txt !== 'auto' && !['gray', 'ink'].includes(s)) fg = txt;
-  const front = opt('cFront') && s !== 'ink' ? bg : '#ffffff';
+  const front = opt('cFront') && !['ink', 'album'].includes(s) ? bg : '#ffffff';   // never put the cover on the QR side
   return {bg, fg, ring, cls, front, decade: showDecade ? decade + 's' : ''};
 }
 function frontHtml(t, qr){
-  const st = cardStyle(yearOf(t));
+  const st = cardStyle(t);
   return `<div class="card front" style="--c:${st.ring};background:${st.front}"><div class="ring">${qr}</div></div>`;
 }
 function backHtml(t){
-  const st = cardStyle(yearOf(t));
+  const st = cardStyle(t);
   return `<div class="card back${st.cls}" style="background:${st.bg};color:${st.fg}"><div class="a">${esc(t.artist)}</div><div><div class="yr">${esc(yearOf(t))}</div>${st.decade ? `<div class="dec">${st.decade}</div>` : ''}</div><div class="t">${esc(cleanTitle(t.title) || t.title)}</div></div>`;
 }
 function renderPreview(){
   $$('.copt').forEach(l => l.classList.toggle('hidden', !l.dataset.for.split(' ').includes(opt('cstyle'))));
-  const sample = tracks[0] || {id: '4uLU6hMCjMI75M1A2tKUQC', title: 'Never Gonna Give You Up', artist: 'Rick Astley', year: '1987'};
+  const sample = tracks[0] || {id: '4uLU6hMCjMI75M1A2tKUQC', title: 'Never Gonna Give You Up', artist: 'Rick Astley', year: '1987', cover: ''};
   const sample2 = tracks.find(t => Math.abs((+yearOf(t)) - (+yearOf(sample))) >= 10) || {id: 'x', title: 'Billie Jean', artist: 'Michael Jackson', year: '1982'};
   $('#cardPreview').innerHTML = frontHtml(sample, qrSvg(REDIRECT + '#t=' + sample.id)) + backHtml(sample) + backHtml(sample2);
   CS_KEYS.forEach(k => store.set('cs_' + k, String(opt(k))));
@@ -787,7 +795,13 @@ $('#printBtn').onclick = () => {
   if (!tracks.length) return;
   if (opt('cstyle') === 'image' && !cardImg){ showMsg('Choose an image for the cards first.'); return; }
   buildPrint(tracks, $('#paper').value);
-  setTimeout(() => window.print(), 100);
+  // wait for album covers to download so they appear in the printout
+  const urls = opt('cstyle') === 'album' ? [...new Set(tracks.map(t => t.cover).filter(Boolean))] : [];
+  if (urls.length) $('#printBtn').textContent = 'Loading covers…';
+  Promise.race([
+    Promise.all(urls.map(u => new Promise(res => { const i = new Image(); i.onload = i.onerror = res; i.src = u; }))),
+    sleep(20000)
+  ]).then(() => { $('#printBtn').textContent = 'Print cards'; setTimeout(() => window.print(), 150); });
 };
 
 // ---------- open-on-phone QR ----------
