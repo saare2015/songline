@@ -582,9 +582,14 @@ $('#startBtn').onclick = async () => {
   msg(''); used = new Set(); store.set('party_used', '[]');
   const ps = Object.entries(players()).sort((a, b) => a[1].joined - b[1].joined).map(([u]) => u);
   if (room.settings?.shuffle !== false) for (let i = ps.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [ps[i], ps[j]] = [ps[j], ps[i]]; }
-  const upd = {state: 'game', order: ps, turn: 0, round: {state: 'idle', n: 0}, placement: null, timelines: null, log: null, winner: null, deals: null, challenges: null, actions: null, tokens: null};
-  ps.forEach((u, i) => { upd[`tokens/${u}`] = room.settings?.tokens ?? 2; upd[`deals/d${String(i).padStart(3, '0')}`] = {uid: u, why: 'start'}; });
-  await fb.update(R(), upd);
+  // Firebase rejects an update that sets both a path and one of its children, so build whole objects
+  const tokens = {}, deals = {};
+  ps.forEach((u, i) => { tokens[u] = room.settings?.tokens ?? 2; deals[`d${String(i).padStart(3, '0')}`] = {uid: u, why: 'start'}; });
+  $('#startBtn').disabled = true;
+  try {
+    await fb.update(R(), {state: 'game', order: ps, turn: 0, round: {state: 'idle', n: 0}, placement: null, timelines: null, log: null, winner: null, challenges: null, actions: null, tokens, deals});
+  } catch(e){ msg('Couldn\'t start the game: ' + esc(e.message)); }
+  $('#startBtn').disabled = false;
   if (!$('#device').options.length) loadDevices();
 };
 
