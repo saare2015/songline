@@ -74,6 +74,14 @@ code{background:#120f1c;padding:2px 6px;border-radius:6px;font-size:13px;word-br
 .eq.paused i{animation-play-state:paused}
 @keyframes eq{0%,100%{height:20%}50%{height:100%}}
 .boss{border-color:#7c3aed}
+.srcbox{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:6px 0 10px}
+.seg label{border:2px solid var(--line);border-radius:12px;padding:10px;cursor:pointer;font-size:14px;text-align:center}
+.seg label:has(input:checked){border-color:var(--accent);background:#3a1f35}
+.seg input{display:none}
+.pl-list{max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:10px;margin-bottom:8px}
+.pl-list label{display:flex;gap:10px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line);cursor:pointer;font-size:14px}
+.pl-list label:last-child{border-bottom:0}
 .boss h2 .tag{font-size:12px;background:#7c3aed;color:#fff;border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:middle}
 
 /* timeline */
@@ -159,6 +167,22 @@ code{background:#120f1c;padding:2px 6px;border-radius:6px;font-size:13px;word-br
       <div class="num"><span>Cards to win</span><div class="ctr"><button data-set="target" data-d="-1">−</button><b id="setTarget"></b><button data-set="target" data-d="1">+</button></div></div>
       <div class="num"><span>Starting tokens</span><div class="ctr"><button data-set="tokens" data-d="-1">−</button><b id="setTokens"></b><button data-set="tokens" data-d="1">+</button></div></div>
       <label class="muted row"><input type="checkbox" id="setShuffle" checked> Random turn order</label>
+      <div class="srcbox">
+        <b>Songs</b>
+        <div class="seg">
+          <label><input type="radio" name="src" value="cards" checked>📷 Printed cards<br><span class="muted">Scan a card each turn</span></label>
+          <label><input type="radio" name="src" value="deck">🎲 No cards<br><span class="muted">Random songs from playlists</span></label>
+        </div>
+        <div id="deckBox" class="hidden">
+          <div class="pl-list" id="plList"><p class="muted" style="padding:10px;margin:0">Loading your playlists…</p></div>
+          <div class="row">
+            <button class="btn secondary sm" id="loadDeck">Load songs</button>
+            <button class="btn ghost sm" id="csvBtn">📂 Card list (CSV)</button>
+            <input type="file" id="csvFile" accept=".csv,text/csv" class="hidden">
+          </div>
+          <p class="muted" id="deckState" style="margin-bottom:0"></p>
+        </div>
+      </div>
       <button class="btn big" id="startBtn" style="margin-top:12px">Start game</button>
       <p class="muted">Each player's first card is free, since it can only go in one place. Players can still join after the game starts.</p>
     </div>
@@ -180,7 +204,9 @@ code{background:#120f1c;padding:2px 6px;border-radius:6px;font-size:13px;word-br
         <button class="btn secondary sm" id="devRefresh" title="Refresh Spotify devices">↻</button>
       </div>
       <div id="bossIdle">
+        <button class="btn big hidden" id="drawBtn">🎲 Play a random song</button>
         <button class="btn big" id="scanBtn">📷 Scan a card</button>
+        <p class="muted hidden" id="deckLeft" style="text-align:center;margin:8px 0 0"></p>
       </div>
       <div id="bossScan" class="hidden">
         <div class="video-wrap"><video id="video" playsinline muted></video><div class="frame"></div></div>
@@ -417,7 +443,7 @@ async function startScan(){
 }
 function stopScan(){ clearTimeout(scanT); if (stream){ stream.getTracks().forEach(t => t.stop()); stream = null; } $('#video').srcObject = null; }
 $('#scanBtn').onclick = startScan;
-$('#skipBtn').onclick = startScan;
+$('#skipBtn').onclick = () => deckMode() ? draw() : startScan();
 $('#cancelScan').onclick = () => { stopScan(); bossStage(); };
 let forcedStage = null;
 function bossStage(s = null){ forcedStage = s; render(); }
@@ -509,6 +535,7 @@ function renderLobby(){
   $('#lobCount').textContent = `(${ps.length})`;
   $('#lobPlayers').innerHTML = ps.map(([u, p]) => `<li><span class="dot ${p.online === false ? 'off' : ''}"></span><span style="flex:1">${esc(p.name)}${u === room.host ? ' 👑' : ''}${u === me ? ' <span class="muted">(you)</span>' : ''}</span>${isHost() && u !== me ? `<button class="btn ghost sm" data-kick="${u}">✕</button>` : ''}</li>`).join('');
   $('#lobBoss').classList.toggle('hidden', !isHost());
+  if (isHost() && !srcInit){ srcInit = true; srcUI(); }
   $('#lobWait').classList.toggle('hidden', isHost());
   $('#setTarget').textContent = room.settings?.target ?? 10;
   $('#setTokens').textContent = room.settings?.tokens ?? 2;
@@ -522,6 +549,8 @@ $$('[data-set]').forEach(b => b.onclick = () => {
 });
 $('#setShuffle').onchange = e => fb.set(R('settings/shuffle'), e.target.checked);
 $('#startBtn').onclick = async () => {
+  if (store.get('party_src') === 'deck' && !deck.length){ msg('Load songs from a playlist (or a card list) first, or switch to printed cards.'); return; }
+  msg(''); used = new Set(); store.set('party_used', '[]');
   const ps = Object.entries(players()).sort((a, b) => a[1].joined - b[1].joined).map(([u]) => u);
   if (room.settings?.shuffle !== false) for (let i = ps.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [ps[i], ps[j]] = [ps[j], ps[i]]; }
   const upd = {state: 'game', order: ps, turn: 0, round: {state: 'idle', n: 0}, placement: null, timelines: null, log: null, winner: null};
@@ -530,7 +559,7 @@ $('#startBtn').onclick = async () => {
   if (!$('#device').options.length) loadDevices();
 };
 
-let viewSel = 'auto';
+let viewSel = 'auto', srcInit = false;
 $('#viewSel').onchange = e => { viewSel = e.target.value; renderGame(); };
 
 function renderGame(){
@@ -556,7 +585,7 @@ function renderGame(){
   const myTurn = act === me;
   let status = '', sub = '';
   if (w){ status = ''; }
-  else if (round.state === 'idle'){ status = myTurn ? '🎯 Your turn!' : `🎯 ${esc(pname(act))}'s turn`; sub = isHost() ? 'Scan a card to start the song.' : `Waiting for ${esc(pname(room.host))} to scan a card…`; }
+  else if (round.state === 'idle'){ status = myTurn ? '🎯 Your turn!' : `🎯 ${esc(pname(act))}'s turn`; sub = isHost() ? (deckMode() ? 'Tap 🎲 to play a random song.' : 'Scan a card to start the song.') : `Waiting for ${esc(pname(room.host))} to start the song…`; }
   else if (round.state === 'playing'){
     status = myTurn ? '🎵 Place the song in your timeline' : `🎵 ${esc(pname(act))} is placing the card…`;
     sub = pl.locked ? 'Locked in. Checking…' : myTurn ? 'Tap a gap where you think it belongs, then lock in.' : 'Listen along. No shouting the answer!';
@@ -575,6 +604,14 @@ function renderGame(){
     $('#bossScan').classList.toggle('hidden', st !== 'scan');
     $('#bossPlaying').classList.toggle('hidden', !(st === 'playing' || st === 'revealed'));
     $('#skipBtn').classList.toggle('hidden', st !== 'playing' || !!pl.locked);
+    const dm = deckMode();
+    $('#drawBtn').classList.toggle('hidden', !dm);
+    $('#scanBtn').className = dm ? 'btn ghost' : 'btn big';
+    $('#scanBtn').style.width = dm ? '100%' : '';
+    $('#scanBtn').style.marginTop = dm ? '8px' : '';
+    $('#scanBtn').textContent = dm ? '📷 Scan a printed card instead' : '📷 Scan a card';
+    $('#deckLeft').classList.toggle('hidden', !dm);
+    if (dm) $('#deckLeft').textContent = `${deckLeft().length} of ${deck.length} songs left`;
     $('#bossResult').classList.toggle('hidden', st !== 'revealed');
     $('#nextBtn').disabled = !!w;
     $('#bossNow').textContent = st === 'revealed' && rc ? `${rc.n} (${rc.y})` : 'Mystery song playing';
@@ -627,21 +664,109 @@ $('#lockBtn').onclick = () => fb.set(R('placement/locked'), true);
 // ================= boss game logic =================
 async function onScanned(id){
   forcedStage = null;
-  const act = active();
-  if (!act){ msg('No players in the game.'); return; }
   try {
     const t = await sp('/tracks/' + id);
     const over = store.json('year_overrides', {});
-    answer = {id, y: over[id] || (t.album?.release_date || '').slice(0, 4), n: t.name, a: t.artists.map(a => a.name).join(', ')};
-    store.set('party_answer', JSON.stringify(answer));
-    await fb.update(R(), {round: {state: 'playing', n: (room.round?.n || 0) + 1, player: act, started: Date.now()}, placement: null});
-    await playId(id);
-  } catch(e){
-    if (e.status === 404) msg('No active Spotify device. Open Spotify on your phone, play something briefly, then tap ↻ and scan again.');
-    else msg('Couldn\'t play that card: ' + esc(e.message));
-  }
+    await startSong({id, y: over[id] || (t.album?.release_date || '').slice(0, 4), n: t.name, a: t.artists.map(a => a.name).join(', ')});
+  } catch(e){ songError(e); }
   render();
 }
+async function startSong(ans){
+  const act = active();
+  if (!act){ msg('No players in the game.'); return; }
+  answer = ans; store.set('party_answer', JSON.stringify(answer));
+  used.add(ans.id); store.set('party_used', JSON.stringify([...used]));
+  await fb.update(R(), {round: {state: 'playing', n: (room.round?.n || 0) + 1, player: act, started: Date.now()}, placement: null});
+  try { await playId(ans.id); } catch(e){ songError(e); }
+}
+function songError(e){
+  if (e.status === 404) msg('No active Spotify device. Open Spotify on your phone, play something briefly, then tap ↻ and try again.');
+  else msg('Couldn\'t play that song: ' + esc(e.message));
+}
+
+// ================= no-cards mode: random songs from playlists =================
+let deck = store.json('party_deck', []), used = new Set(store.json('party_used', [])), plLoaded = false;
+const deckMode = () => store.get('party_src') === 'deck' && deck.length > 0;
+const deckLeft = () => deck.filter(t => !used.has(t.id));
+function draw(){
+  forcedStage = null; stopScan();
+  const left = deckLeft();
+  if (!left.length){ msg('Every song in the list has been played. Load more songs in the lobby, or scan printed cards.', 'info'); render(); return; }
+  const t = left[Math.floor(Math.random() * left.length)];
+  const over = store.json('year_overrides', {});
+  startSong({id: t.id, y: over[t.id] || t.y, n: t.n, a: t.a}).then(render);
+}
+$('#drawBtn').onclick = draw;
+function setDeck(list, label){
+  const seen = new Set(); deck = [];
+  for (const t of list) if (t.id && /^\d{4}$/.test(String(t.y)) && !seen.has(t.id)){ seen.add(t.id); deck.push(t); }
+  store.set('party_deck', JSON.stringify(deck));
+  $('#deckState').textContent = deck.length ? `✓ ${deck.length} songs ready${label ? ' from ' + label : ''}. Years come from Spotify, plus any you corrected on the main page.` : 'No songs found.';
+}
+function srcUI(){
+  const src = store.get('party_src') || 'cards';
+  $$('input[name="src"]').forEach(r => r.checked = r.value === src);
+  $('#deckBox').classList.toggle('hidden', src !== 'deck');
+  if (src === 'deck' && !plLoaded) loadPlaylists();
+  if (src === 'deck' && deck.length && !$('#deckState').textContent) $('#deckState').textContent = `✓ ${deck.length} songs ready (from last time).`;
+}
+$$('input[name="src"]').forEach(r => r.onchange = () => { store.set('party_src', r.value); srcUI(); });
+async function loadPlaylists(){
+  plLoaded = true;
+  try {
+    let url = '/me/playlists?limit=50', all = [];
+    while (url){ const d = await sp(url.replace(API, '')); all = all.concat((d.items || []).filter(Boolean)); url = d.next; }
+    const count = p => p.items?.total ?? p.tracks?.total ?? '';
+    $('#plList').innerHTML = all.map(p => `<label><input type="checkbox" value="${esc(p.id)}"> <span>${esc(p.name)}</span><span class="muted" style="margin-left:auto">${count(p)}</span></label>`).join('') || '<p class="muted" style="padding:10px;margin:0">No playlists found.</p>';
+  } catch(e){ plLoaded = false; $('#plList').innerHTML = `<p class="muted" style="padding:10px;margin:0">Couldn't load playlists: ${esc(e.message)}</p>`; }
+}
+$('#loadDeck').onclick = async () => {
+  const ids = $$('#plList input:checked').map(i => i.value);
+  if (!ids.length){ $('#deckState').textContent = 'Tick at least one playlist.'; return; }
+  $('#loadDeck').disabled = true; $('#deckState').textContent = 'Loading…';
+  const list = [];
+  try {
+    for (const pid of ids){
+      let url = `/playlists/${pid}/items?limit=50`;
+      while (url){
+        const d = await sp(url.replace(API, ''));
+        for (const it of d.items || []){
+          const t = it.item || it.track;
+          if (!t || t.is_local || (t.type && t.type !== 'track') || !t.id) continue;
+          list.push({id: t.id, y: (t.album?.release_date || '').slice(0, 4), n: t.name, a: (t.artists || []).map(a => a.name).join(', ')});
+        }
+        url = d.next;
+        $('#deckState').textContent = `Loading… ${list.length} songs`;
+      }
+    }
+    setDeck(list, `${ids.length} playlist${ids.length > 1 ? 's' : ''}`);
+  } catch(e){ $('#deckState').textContent = 'Couldn\'t load songs: ' + e.message + (e.status === 403 ? ' (Spotify only allows playlists you own or collaborate on).' : ''); }
+  $('#loadDeck').disabled = false;
+};
+function parseCSV(text){
+  text = text.replace(/^\ufeff/, '');
+  const first = text.split(/\r?\n/)[0], d = first.split(';').length > first.split(',').length ? ';' : ',';
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++){
+    const c = text[i];
+    if (q){ if (c === '"'){ if (text[i + 1] === '"'){ f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"') q = true;
+    else if (c === d){ row.push(f); f = ''; }
+    else if (c === '\n' || c === '\r'){ if (c === '\r' && text[i + 1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; }
+    else f += c;
+  }
+  if (f || row.length){ row.push(f); rows.push(row); }
+  return rows.filter(r => r.some(x => x.trim()));
+}
+$('#csvBtn').onclick = () => $('#csvFile').click();
+$('#csvFile').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  const rows = parseCSV(await f.text()); e.target.value = '';
+  const head = (rows.shift() || []).map(h => h.trim().toLowerCase()), col = n => head.indexOf(n);
+  const iId = col('spotify_id') >= 0 ? col('spotify_id') : col('id');
+  if (iId < 0){ $('#deckState').textContent = 'That file isn\'t a SongLine card list (save one from Make cards on the main page).'; return; }
+  setDeck(rows.map(r => ({id: (parseTrack(r[iId]) || r[iId] || '').trim(), y: (r[col('year')] || '').trim(), n: r[col('title')] || '', a: r[col('artist')] || ''})), f.name);
+};
 let evaluating = false;
 async function evaluate(){
   evaluating = true;
