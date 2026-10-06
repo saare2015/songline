@@ -258,6 +258,7 @@ code{background:#120f1c;padding:2px 6px;border-radius:6px;font-size:13px;word-br
         <button class="btn secondary sm hidden" id="tokSkip">⏭ Skip this song · 1 🪙</button>
         <button class="btn secondary sm hidden" id="tokSteal">🕵 Steal · 1 🪙</button>
         <button class="btn ghost sm hidden" id="tokStealCancel">Cancel steal</button>
+        <button class="btn secondary sm hidden" id="tokPass">👍 No steal</button>
         <button class="btn secondary sm hidden" id="tokBuy">🎁 Free card · 3 🪙</button>
       </div>
       <div class="tokhelp" id="tokHelp">Skip a song on your turn: 1 🪙 · Steal when you think the player is wrong: 1 🪙 · Free card: 3 🪙 · Name the title and artist to earn 1 🪙 (max 5)</div>
@@ -271,6 +272,11 @@ code{background:#120f1c;padding:2px 6px;border-radius:6px;font-size:13px;word-br
       </div>
       <div class="tl" id="tl"></div>
       <button class="btn big hidden" id="lockBtn" style="margin-top:12px">🔒 Lock in my guess</button>
+      <div class="row hidden" id="tlActions" style="justify-content:center;margin-top:10px">
+        <button class="btn secondary sm" data-proxy="tokSkip">⏭ Skip this song · 1 🪙</button>
+        <button class="btn secondary sm" data-proxy="tokSteal">🕵 Steal · 1 🪙</button>
+        <button class="btn secondary sm" data-proxy="tokPass">👍 No steal</button>
+      </div>
     </div>
   </section>
 </div>
@@ -587,7 +593,7 @@ $('#startBtn').onclick = async () => {
   ps.forEach((u, i) => { tokens[u] = room.settings?.tokens ?? 2; deals[`d${String(i).padStart(3, '0')}`] = {uid: u, why: 'start'}; });
   $('#startBtn').disabled = true;
   try {
-    await fb.update(R(), {state: 'game', order: ps, turn: 0, round: {state: 'idle', n: 0}, placement: null, timelines: null, log: null, winner: null, challenges: null, actions: null, tokens, deals});
+    await fb.update(R(), {state: 'game', order: ps, turn: 0, round: {state: 'idle', n: 0}, placement: null, timelines: null, log: null, winner: null, challenges: null, passes: null, actions: null, tokens, deals});
   } catch(e){ msg('Couldn\'t start the game: ' + esc(e.message)); }
   $('#startBtn').disabled = false;
   if (!$('#device').options.length) loadDevices();
@@ -595,6 +601,12 @@ $('#startBtn').onclick = async () => {
 
 let viewSel = 'auto', srcInit = false, stealMode = false, scanPurpose = null, reconciling = false;
 $('#viewSel').onchange = e => { viewSel = e.target.value; renderGame(); };
+function undecided(){
+  const round = room.round || {}, ch = room.challenges || {}, ps = room.passes || {}, act = active();
+  if (round.state !== 'challenge') return [];
+  const spots = timeline(act).length - Object.keys(ch).length;   // free gaps besides the player's own
+  return order().filter(u => u !== act && !ch[u] && !ps[u] && tok(u) >= 1 && spots > 0);
+}
 const startDealsPending = () => entries(room.deals).some(([, d]) => d.why === 'start');
 
 function renderGame(){
@@ -637,6 +649,8 @@ function renderGame(){
     status = myTurn ? '🔒 Locked in. Anyone stealing?' : `🔒 ${esc(pname(act))} locked in`;
     sub = myTurn ? 'Other players can use a token to bet on a different spot.' : stealMode ? 'Tap the gap where YOU think the song belongs.' : ch[me] ? 'Your steal is in. Waiting for the reveal…' : (timeline(act).length - nCh > 0 ? 'Think they\'re wrong? Steal for 1 🪙.' : 'Every spot is taken, so no more steals.');
     if (nCh) sub += ` 🕵 ${nCh} steal${nCh > 1 ? 's' : ''} so far.`;
+    const wait = undecided();
+    if (wait.length) sub += ` Waiting for: ${wait.map(u => esc(pname(u))).join(', ')}.`;
   }
   else if (round.state === 'revealed'){
     const stolen = !round.correct && round.owner && round.owner !== round.player;
@@ -667,7 +681,8 @@ function renderGame(){
     $('#deckLeft').classList.toggle('hidden', !dm);
     if (dm) $('#deckLeft').textContent = `${deckLeft().length} of ${deck.length} songs left`;
     $('#hostChallenge').classList.toggle('hidden', st !== 'challenge');
-    $('#chList').textContent = nCh ? '🕵 Steals: ' + Object.entries(ch).map(([u, c]) => `${pname(u)} (${slotLabel(timeline(act), c.slot)})`).join(', ') : 'Waiting for steals. Reveal when everyone has decided.';
+    const wt = undecided(), pa = Object.keys(room.passes || {});
+    $('#chList').textContent = (nCh ? '🕵 Steals: ' + Object.entries(ch).map(([u, c]) => `${pname(u)} (${slotLabel(timeline(act), c.slot)})`).join(', ') + '. ' : '') + (pa.length ? `👍 Passed: ${pa.map(pname).join(', ')}. ` : '') + (wt.length ? `Waiting for ${wt.map(pname).join(', ')}. It reveals by itself once everyone has decided, or tap Reveal.` : 'Everyone has decided. Revealing…');
     $('#namedRow').classList.toggle('hidden', !(['playing', 'challenge', 'revealed'].includes(st) && !round.named && act && tok(act) < TOKEN_MAX && !w));
     $('#namedBtn').textContent = `🪙 ${pname(act)} named title + artist (+1)`;
     $('#hostResult').classList.toggle('hidden', st !== 'revealed');
@@ -683,6 +698,7 @@ function renderGame(){
   $('#viewSel').innerHTML = `<option value="auto">Follow the turn</option>` + o.map(u => `<option value="${u}">${esc(pname(u))}${u === me ? ' (you)' : ''}</option>`).join('');
   $('#viewSel').value = players()[viewSel] ? viewSel : 'auto';
   renderTimeline(viewUid, round, pl, ch);
+  syncProxies();
 }
 $('#score').onclick = e => { const b = e.target.closest('[data-p]'); if (b && isHost()){ pmUid = b.dataset.p; renderPM(); $('#pModal').classList.remove('hidden'); } };
 document.addEventListener('click', e => {
@@ -704,10 +720,13 @@ function renderTokens(round, pl, ch, myTurn, w){
   $('#tokSkip').classList.toggle('hidden', !skipV); $('#tokSkip').disabled = t < 1 || busy;
   $('#tokSteal').classList.toggle('hidden', !stealV); $('#tokSteal').disabled = t < 1 || busy;
   $('#tokStealCancel').classList.toggle('hidden', !stealMode);
+  const passed = !!room.passes?.[me];
+  $('#tokPass').classList.toggle('hidden', !(undecided().includes(me) && !stealMode) || busy);
   $('#tokBuy').classList.toggle('hidden', !buyV); $('#tokBuy').disabled = t < 3 || busy;
   const bet = ch[me];
-  $('#myBet').classList.toggle('hidden', !(bet && st === 'challenge'));
+  $('#myBet').classList.toggle('hidden', !((bet || passed) && st === 'challenge'));
   if (bet) $('#myBet').textContent = `🕵 Your steal: ${slotLabel(timeline(active()), bet.slot)}`;
+  else if (passed) $('#myBet').textContent = '👍 You passed this time';
 }
 let pendingAction = null;
 async function sendAction(a){
@@ -719,6 +738,14 @@ async function sendAction(a){
 $('#tokSkip').onclick = () => { if (confirm('Spend 1 token to skip this song?')) sendAction({type: 'skip'}); };
 $('#tokSteal').onclick = () => { stealMode = true; viewSel = 'auto'; renderGame(); };
 $('#tokStealCancel').onclick = () => { stealMode = false; renderGame(); };
+$('#tokPass').onclick = () => sendAction({type: 'pass'});
+// the same buttons, repeated right under the timeline so they're next to where you're looking
+function syncProxies(){
+  let any = false;
+  $$('[data-proxy]').forEach(b => { const src = $('#' + b.dataset.proxy); const v = !src.classList.contains('hidden'); b.classList.toggle('hidden', !v); b.disabled = src.disabled; any = any || v; });
+  $('#tlActions').classList.toggle('hidden', !any);
+}
+$('#tlActions').onclick = e => { const b = e.target.closest('[data-proxy]'); if (b && !b.disabled) $('#' + b.dataset.proxy).click(); };
 $('#tokBuy').onclick = () => { if (confirm('Spend 3 tokens for a free card in your timeline?')) sendAction({type: 'buy'}); };
 
 function renderTimeline(uid, round, pl, ch){
@@ -783,7 +810,7 @@ async function startSong(ans){
   if (!act){ msg('No players in the game.'); return; }
   answer = ans; store.set('party_answer', JSON.stringify(answer));
   used.add(ans.id); store.set('party_used', JSON.stringify([...used]));
-  await fb.update(R(), {round: {state: 'playing', n: (room.round?.n || 0) + 1, player: act, started: Date.now()}, placement: null, challenges: null});
+  await fb.update(R(), {round: {state: 'playing', n: (room.round?.n || 0) + 1, player: act, started: Date.now()}, placement: null, challenges: null, passes: null});
   try { await playId(ans.id); } catch(e){ songError(e); }
 }
 function songError(e){
@@ -875,7 +902,7 @@ $('#csvFile').onchange = async e => {
   setDeck(rows.map(r => ({id: (parseTrack(r[iId]) || r[iId] || '').trim(), y: (r[col('year')] || '').trim(), n: r[col('title')] || '', a: r[col('artist')] || ''})), f.name);
 };
 // ================= host: rules engine =================
-let evaluating = false, busyActions = new Set(), dealing = false, challengeOpening = false;
+let evaluating = false, busyActions = new Set(), dealing = false, challengeOpening = false, autoRevealT = null;
 function fits(cards, s, y){
   const lo = s > 0 ? +cards[s - 1].y : -Infinity, hi = s < cards.length ? +cards[s].y : Infinity;
   return lo <= +y && +y <= hi;
@@ -887,10 +914,14 @@ function hostDuties(){
   // 2) deals in no-cards mode are automatic
   if (deckMode() && !dealing && entries(room.deals).length){ dealing = true; autoDeals().finally(() => { dealing = false; }); }
   // 3) placement locked: open the steal window (or reveal straight away if nobody can steal)
+  // 4) everyone has stolen or passed: reveal automatically
+  if (round.state === 'challenge' && !evaluating && !entries(room.actions).length && !undecided().length && !autoRevealT){
+    autoRevealT = setTimeout(() => { autoRevealT = null; if (room?.round?.state === 'challenge' && !undecided().length) evaluate(); }, 600);
+  }
   if (round.state === 'playing' && pl.locked && !challengeOpening){
     challengeOpening = true;
     const others = order().filter(u => u !== round.player && tok(u) >= 1);
-    (others.length ? fb.update(R(), {'round/state': 'challenge', challenges: null}) : evaluate()).finally(() => { challengeOpening = false; });
+    (others.length ? fb.update(R(), {'round/state': 'challenge', challenges: null, passes: null}) : evaluate()).finally(() => { challengeOpening = false; });
   }
 }
 async function processAction(k, a){
@@ -909,6 +940,9 @@ async function processAction(k, a){
       && a.slot !== room.placement?.slot && !Object.values(room.challenges || {}).some(c => c.slot === a.slot)
       && a.slot >= 0 && a.slot <= timeline(act).length){
     upd[`tokens/${a.uid}`] = have - 1; upd[`challenges/${a.uid}`] = {slot: a.slot, t: Date.now()};
+  }
+  if (a.type === 'pass' && round.state === 'challenge' && a.uid !== act && !room.challenges?.[a.uid]){
+    upd[`passes/${a.uid}`] = true;
   }
   if (a.type === 'buy' && have >= 3 && ['idle', 'revealed'].includes(round.state) && !room.winner){
     upd[`tokens/${a.uid}`] = have - 3; upd[`deals/${fb.push(R('deals')).key}`] = {uid: a.uid, why: 'buy'};
@@ -984,19 +1018,19 @@ $('#markBad').onclick = () => override(false);
 $('#nextBtn').onclick = async () => {
   await pauseMusic(); answer = null; store.del('party_answer');
   const o = order();
-  await fb.update(R(), {turn: ((room.turn || 0) + 1) % Math.max(1, o.length), round: {state: 'idle', n: room.round?.n || 0}, placement: null, challenges: null});
+  await fb.update(R(), {turn: ((room.turn || 0) + 1) % Math.max(1, o.length), round: {state: 'idle', n: room.round?.n || 0}, placement: null, challenges: null, passes: null});
 };
 $('#endBtn').onclick = async () => { if (confirm('End this game and go back to the lobby? Timelines will be cleared.')) backToLobby(); };
 async function backToLobby(){
   await pauseMusic(); answer = null; store.del('party_answer');
-  await fb.update(R(), {state: 'lobby', round: null, placement: null, timelines: null, log: null, winner: null, turn: 0, deals: null, challenges: null, actions: null});
+  await fb.update(R(), {state: 'lobby', round: null, placement: null, timelines: null, log: null, winner: null, turn: 0, deals: null, challenges: null, passes: null, actions: null});
 }
 
 // player edit (host)
 let pmUid = null;
 function renderPM(){ const p = players()[pmUid]; if (!p) return; $('#pmName').textContent = p.name; $('#pmTokens').textContent = tok(pmUid); $('#pmKick').classList.toggle('hidden', pmUid === me); }
 $$('[data-tok]').forEach(b => b.onclick = async () => { if (!players()[pmUid]) return; await fb.set(R(`tokens/${pmUid}`), Math.max(0, Math.min(TOKEN_MAX, tok(pmUid) + +b.dataset.tok))); renderPM(); });
-$('#pmTurn').onclick = async () => { const i = order().indexOf(pmUid); if (i >= 0) await fb.update(R(), {turn: i, round: {state: 'idle', n: room.round?.n || 0}, placement: null, challenges: null}); $('#pModal').classList.add('hidden'); };
+$('#pmTurn').onclick = async () => { const i = order().indexOf(pmUid); if (i >= 0) await fb.update(R(), {turn: i, round: {state: 'idle', n: room.round?.n || 0}, placement: null, challenges: null, passes: null}); $('#pModal').classList.add('hidden'); };
 $('#pmKick').onclick = async () => { if (confirm(`Remove ${pname(pmUid)} from the game?`)){ await fb.update(R(), {[`players/${pmUid}`]: null, [`timelines/${pmUid}`]: null, [`tokens/${pmUid}`]: null}); $('#pModal').classList.add('hidden'); } };
 
 // history
