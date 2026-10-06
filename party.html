@@ -116,7 +116,7 @@ code{background:#120f1c;padding:2px 6px;border-radius:6px;font-size:13px;word-br
 <body>
 <div class="app">
   <header>
-    <a class="logo" href="./">Song<span>Line</span></a><span class="pill">ONLINE</span>
+    <a class="logo" href="./">Song<span>Line</span></a><span class="pill">ONLINE</span><span class="muted" style="font-size:11px" title="All phones should show the same version">v9</span>
     <nav>
       <button class="icon-btn hidden" id="histBtn" title="History">📜</button>
       <button class="icon-btn hidden" id="leaveBtn" title="Leave room">Leave</button>
@@ -556,7 +556,17 @@ $('#leaveBtn').onclick = async () => {
 };
 
 // ================= rendering =================
+let renderQueued = false;
 function render(){
+  if (renderQueued) return;
+  renderQueued = true;
+  queueMicrotask(() => {
+    renderQueued = false;
+    try { renderNow(); }
+    catch(e){ console.error(e); msg('Display error: ' + esc(e.message) + '. Please tell the host / reload.'); }
+  });
+}
+function renderNow(){
   if (!room) return;
   if (room.state === 'lobby') renderLobby(); else renderGame();
   if (!$('#histModal').classList.contains('hidden')) renderHist();
@@ -600,7 +610,7 @@ $('#startBtn').onclick = async () => {
 };
 
 let viewSel = 'auto', srcInit = false, stealMode = false, scanPurpose = null, reconciling = false;
-$('#viewSel').onchange = e => { viewSel = e.target.value; renderGame(); };
+$('#viewSel').onchange = e => { viewSel = e.target.value; render(); };
 function undecided(){
   const round = room.round || {}, ch = room.challenges || {}, ps = room.passes || {}, act = active();
   if (round.state !== 'challenge') return [];
@@ -643,7 +653,7 @@ function renderGame(){
   else if (round.state === 'idle'){ status = myTurn ? '🎯 Your turn!' : `🎯 ${esc(pname(act))}'s turn`; sub = host ? (deckMode() ? 'Tap 🎲 to play a random song.' : 'Scan a card to start the song.') : `Waiting for ${esc(pname(room.host))} to start the song…`; if (round.skipped) sub = `⏭ ${esc(pname(round.skipped))} skipped the last song. ` + sub; }
   else if (round.state === 'playing'){
     status = myTurn ? '🎵 Place the song in your timeline' : `🎵 ${esc(pname(act))} is placing the card…`;
-    sub = myTurn ? 'Tap a gap where you think it belongs, then lock in.' : 'Listen along. No shouting the answer!';
+    sub = pl.locked ? `Locked in. Waiting for ${esc(pname(room.host))}'s phone… (keep the host's screen on)` : myTurn ? 'Tap a gap where you think it belongs, then lock in.' : 'Listen along. No shouting the answer!';
   }
   else if (round.state === 'challenge'){
     status = myTurn ? '🔒 Locked in. Anyone stealing?' : `🔒 ${esc(pname(act))} locked in`;
@@ -714,14 +724,14 @@ function renderTokens(round, pl, ch, myTurn, w){
   const t = tok(me), st = round.state, busy = !!pendingAction;
   $('#tokHave').textContent = `Your tokens: ${'🪙'.repeat(Math.min(t, 10)) || '0'}${t > 10 ? ' ×' + t : ''}`;
   const skipV = !w && myTurn && st === 'playing';
-  const freeSpots = st === 'challenge' ? timeline(active()).length + 1 - 1 - Object.keys(ch).length : 0;
-  const stealV = !w && !myTurn && st === 'challenge' && !ch[me] && !stealMode && freeSpots > 0;
+  const canDecide = !w && undecided().includes(me) && !stealMode;
+  const stealV = canDecide;
   const buyV = !w && (st === 'idle' || st === 'revealed') && !startDealsPending();
   $('#tokSkip').classList.toggle('hidden', !skipV); $('#tokSkip').disabled = t < 1 || busy;
   $('#tokSteal').classList.toggle('hidden', !stealV); $('#tokSteal').disabled = t < 1 || busy;
   $('#tokStealCancel').classList.toggle('hidden', !stealMode);
   const passed = !!room.passes?.[me];
-  $('#tokPass').classList.toggle('hidden', !(undecided().includes(me) && !stealMode) || busy);
+  $('#tokPass').classList.toggle('hidden', !canDecide || busy);
   $('#tokBuy').classList.toggle('hidden', !buyV); $('#tokBuy').disabled = t < 3 || busy;
   const bet = ch[me];
   $('#myBet').classList.toggle('hidden', !((bet || passed) && st === 'challenge'));
@@ -730,14 +740,14 @@ function renderTokens(round, pl, ch, myTurn, w){
 }
 let pendingAction = null;
 async function sendAction(a){
-  pendingAction = a.type; renderGame();
+  pendingAction = a.type; render();
   try { await fb.set(fb.push(R('actions')), {...a, uid: me, t: Date.now()}); }
   catch(e){ msg('Couldn\'t send that: ' + esc(e.message)); }
   setTimeout(() => { pendingAction = null; if (room) render(); }, 1500);
 }
 $('#tokSkip').onclick = () => { if (confirm('Spend 1 token to skip this song?')) sendAction({type: 'skip'}); };
-$('#tokSteal').onclick = () => { stealMode = true; viewSel = 'auto'; renderGame(); };
-$('#tokStealCancel').onclick = () => { stealMode = false; renderGame(); };
+$('#tokSteal').onclick = () => { stealMode = true; viewSel = 'auto'; render(); };
+$('#tokStealCancel').onclick = () => { stealMode = false; render(); };
 $('#tokPass').onclick = () => sendAction({type: 'pass'});
 // the same buttons, repeated right under the timeline so they're next to where you're looking
 function syncProxies(){
@@ -756,7 +766,7 @@ function renderTimeline(uid, round, pl, ch){
   const challenge = round.state === 'challenge' && isTurn;
   let html = '';
   const card = (c, cls = '') => `<div class="tcard ${cls}"><div class="y">${esc(c.y)}</div><div><div class="t">${esc(c.n)}</div><div class="a">${esc(c.a)}</div></div></div>`;
-  const mystery = `<div class="tcard mystery">🎵 ? ${round.state === 'challenge' ? '🔒 ' + esc(pname(uid)) : ''}</div>`;
+  const mystery = `<div class="tcard mystery">🎵 ? ${pl.locked || round.state === 'challenge' ? '🔒 ' + esc(pname(uid)) : ''}</div>`;
   const stealers = i => Object.entries(ch).filter(([, c]) => c.slot === i).map(([u]) => `<div class="steal-tag">🕵 ${esc(pname(u))} bets here</div>`).join('');
   const taken = i => i === pl.slot || Object.values(ch).some(c => c.slot === i);
   if (placing || challenge){
