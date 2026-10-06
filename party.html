@@ -88,6 +88,8 @@ code{background:#120f1c;padding:2px 6px;border-radius:6px;font-size:13px;word-br
 .tokhelp{font-size:12px;color:var(--muted);text-align:center}
 .steal-tag{font-size:12px;background:#0e3a44;color:#a5f3fc;border-radius:999px;padding:3px 10px;align-self:center}
 .deal{background:#1d2b1f;border:1px solid #166534;border-radius:12px;padding:10px;margin-bottom:10px;text-align:center}
+.welcome{background:linear-gradient(135deg,#7c3aed,#ff3d8b);border-radius:20px;padding:22px 18px;margin-bottom:14px;text-align:center;font-weight:900;font-size:clamp(26px,8vw,46px);line-height:1.15;white-space:pre-line;overflow-wrap:anywhere;box-shadow:0 10px 30px rgba(255,61,139,.25)}
+.welcome-count{font-size:12px;color:var(--muted);text-align:left}
 .host h2 .tag{font-size:12px;background:#7c3aed;color:#fff;border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:middle}
 
 /* timeline */
@@ -116,7 +118,7 @@ code{background:#120f1c;padding:2px 6px;border-radius:6px;font-size:13px;word-br
 <body>
 <div class="app">
   <header>
-    <a class="logo" href="./">Song<span>Line</span></a><span class="pill">ONLINE</span><span class="muted" style="font-size:11px" title="All phones should show the same version">v9</span>
+    <a class="logo" href="./">Song<span>Line</span></a><span class="pill">ONLINE</span><span class="muted" style="font-size:11px" title="All phones should show the same version">v10</span>
     <nav>
       <button class="icon-btn hidden" id="histBtn" title="History">📜</button>
       <button class="icon-btn hidden" id="leaveBtn" title="Leave room">Leave</button>
@@ -158,6 +160,7 @@ code{background:#120f1c;padding:2px 6px;border-radius:6px;font-size:13px;word-br
 
   <!-- lobby -->
   <section id="s-lobby" class="hidden">
+    <div class="welcome hidden" id="lobWelcome" dir="auto"></div>
     <div class="panel" style="text-align:center">
       <div class="muted">Room code</div>
       <div class="code" id="lobCode"></div>
@@ -170,6 +173,11 @@ code{background:#120f1c;padding:2px 6px;border-radius:6px;font-size:13px;word-br
     </div>
     <div class="panel host hidden" id="lobHost">
       <h2>Game settings <span class="tag">HOST</span></h2>
+      <div style="margin-bottom:12px">
+        <label class="muted" for="setWelcome">Welcome message (shown big to everyone in the lobby)</label>
+        <textarea class="inp" id="setWelcome" dir="auto" maxlength="140" rows="2" placeholder="e.g. Welcome to Saar's birthday! 🎂" style="min-height:64px;margin-top:4px;font:inherit"></textarea>
+        <div class="welcome-count" id="welcomeCount"></div>
+      </div>
       <div class="num"><span>Cards to win</span><div class="ctr"><button data-set="target" data-d="-1">−</button><b id="setTarget"></b><button data-set="target" data-d="1">+</button></div></div>
       <div class="num"><span>Starting tokens</span><div class="ctr"><button data-set="tokens" data-d="-1">−</button><b id="setTokens"></b><button data-set="tokens" data-d="1">+</button></div></div>
       <label class="muted row"><input type="checkbox" id="setShuffle" checked> Random turn order</label>
@@ -504,7 +512,7 @@ $('#createBtn').onclick = async () => {
       try { await fb.set(R('host'), me); ok = true; } catch(e){ if (i === 5) throw e; }
     }
     const now = Date.now();
-    await fb.update(R(), {created: now, state: 'lobby', settings: {target: 10, tokens: 2, shuffle: true}, [`players/${me}`]: {name: myName(), joined: now, online: true}});
+    await fb.update(R(), {created: now, state: 'lobby', settings: {target: 10, tokens: 2, shuffle: true, welcome: store.get('party_welcome') || null}, [`players/${me}`]: {name: myName(), joined: now, online: true}});
     enterRoom(code);
   } catch(e){ msg('Couldn\'t create the room: ' + esc(e.message) + '. Check the database rules and that Anonymous sign-in is enabled (README).'); }
   $('#createBtn').disabled = false;
@@ -579,6 +587,11 @@ function renderLobby(){
   const ps = Object.entries(players()).sort((a, b) => a[1].joined - b[1].joined);
   $('#lobCount').textContent = `(${ps.length})`;
   $('#lobPlayers').innerHTML = ps.map(([u, p]) => `<li><span class="dot ${p.online === false ? 'off' : ''}"></span><span style="flex:1">${esc(p.name)}${u === room.host ? ' 👑' : ''}${u === me ? ' <span class="muted">(you)</span>' : ''}</span>${isHost() && u !== me ? `<button class="btn ghost sm" data-kick="${u}">✕</button>` : ''}</li>`).join('');
+  const wm = (room.settings?.welcome || '').trim();
+  $('#lobWelcome').classList.toggle('hidden', !wm);
+  $('#lobWelcome').textContent = wm;
+  if (isHost() && document.activeElement !== $('#setWelcome')) $('#setWelcome').value = room.settings?.welcome || '';
+  $('#welcomeCount').textContent = `${($('#setWelcome').value || '').length}/140`;
   $('#lobHost').classList.toggle('hidden', !isHost());
   if (isHost() && !srcInit){ srcInit = true; srcUI(); }
   $('#lobWait').classList.toggle('hidden', isHost());
@@ -592,6 +605,14 @@ $$('[data-set]').forEach(b => b.onclick = () => {
   const v = Math.min(lim[1], Math.max(lim[0], (room.settings?.[k] ?? (k === 'target' ? 10 : 2)) + +b.dataset.d));
   fb.set(R('settings/' + k), v);
 });
+let welcomeT = null;
+$('#setWelcome').oninput = e => {
+  const v = e.target.value.slice(0, 140);
+  $('#welcomeCount').textContent = `${v.length}/140`;
+  store.set('party_welcome', v);
+  clearTimeout(welcomeT);
+  welcomeT = setTimeout(() => fb.set(R('settings/welcome'), v || null).catch(err => msg('Couldn\'t save the message: ' + esc(err.message))), 400);
+};
 $('#setShuffle').onchange = e => fb.set(R('settings/shuffle'), e.target.checked);
 $('#startBtn').onclick = async () => {
   if (store.get('party_src') === 'deck' && !deck.length){ msg('Load songs from a playlist (or a card list) first, or switch to printed cards.'); return; }
