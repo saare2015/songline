@@ -145,17 +145,99 @@ nav{margin-left:auto;position:relative}
 .mi .ic{width:22px;text-align:center}
 .mi.on{background:var(--accent);color:var(--on-accent,#fff)}
 .menu hr{border:0;border-top:1px solid var(--line);margin:4px 6px}
+
+/* ---------- light mode ---------- */
+body.light{--text:#1d1830;--muted:#6b6485}
+body.light .msg.err{background:#fde2ea;color:#9f1239}
+body.light .msg.info{background:#dff1fb;color:#0c4a6e}
+body.light .result.ok{background:#dcfce7;border-color:#86efac}
+body.light .result.bad{background:#ffe4e6;border-color:#fda4af}
+body.light .tcard.wrong{background:#ffe4e6}
+body.light .deal{background:#dcfce7;border-color:#86efac}
+body.light .steal-tag{background:#cffafe;color:#155e75}
+body.light .warnbox,body.light .dk-dup{background:#fef3c7;color:#92400e}
+body.light .dk-played{background:#dcfce7;color:#166534}
+body.light .modal{background:rgba(30,25,50,.45)}
+body.light .mi:hover{background:rgba(0,0,0,.06)}
+body.light .menu{box-shadow:0 14px 34px rgba(0,0,0,.18)}
+/* ---------- timeline: covers, decades, table layout ---------- */
+.tl{perspective:900px}
+.tcard{position:relative;cursor:pointer}
+.tcard.mystery,.tcard.wrong{cursor:default}
+.tcard .cv{width:46px;height:46px;border-radius:8px;object-fit:cover;flex:0 0 auto;background:var(--field)}
+.tcard .tx{min-width:0}
+.decade{font-size:11px;font-weight:800;letter-spacing:2px;color:var(--muted);display:flex;align-items:center;gap:8px;margin:2px 0}
+.decade::before,.decade::after{content:"";flex:1;border-top:1px solid var(--line)}
+.tl.h{flex-direction:row;overflow-x:auto;align-items:stretch;padding:4px 2px 12px;scroll-snap-type:x proximity}
+.tl.h .tcard{flex-direction:column;align-items:stretch;justify-content:flex-start;gap:4px;width:120px;min-width:120px;min-height:176px;padding:8px;text-align:center;scroll-snap-align:center}
+.tl.h .tcard .cv{width:100%;height:104px}
+.tl.h .tcard .y{min-width:0;font-size:22px}
+.tl.h .tcard .t{font-size:12px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.tl.h .tcard .a{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl.h .tcard.mystery{justify-content:center;align-items:center;font-size:18px}
+.tl.h .gap{min-width:44px;width:44px;padding:4px;font-size:20px}
+.tl.h .gap .gl{display:none}
+.tl.h .steal-tag{writing-mode:vertical-rl;align-self:center}
+.tl.h .decade{flex-direction:column;padding:0 2px;writing-mode:vertical-rl}
+.tl.h .decade::before,.tl.h .decade::after{border-top:0;border-left:1px solid var(--line)}
+.tl.h .empty{flex:1}
+.nocv{display:flex;align-items:center;justify-content:center;font-size:30px}
+/* ---------- drag to place ---------- */
+.dragsrc{touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab}
+.dragghost{position:fixed;z-index:80;pointer-events:none;transform:translate(-50%,-50%) rotate(-4deg);box-shadow:0 14px 34px rgba(0,0,0,.5);opacity:.95}
+.gap.near{border-color:var(--accent);border-style:solid;background:var(--hi);color:var(--text)}
+#dragBox{margin-bottom:10px}
+#dragBox .tcard{justify-content:center}
+/* ---------- animations ---------- */
+@keyframes flipIn{0%{transform:rotateY(90deg) scale(.85);opacity:0}60%{transform:rotateY(-12deg) scale(1.03);opacity:1}100%{transform:none}}
+@keyframes shake{0%,100%{transform:none}20%,60%{transform:translateX(-9px)}40%,80%{transform:translateX(9px)}}
+@keyframes fadeWrong{0%,60%{opacity:1}100%{opacity:.5}}
+@keyframes flyIn{0%{transform:translateY(-80px) scale(.5) rotate(-12deg);opacity:0}100%{transform:none;opacity:1}}
+@keyframes pulse{0%,100%{transform:none}50%{transform:scale(1.07)}}
+@keyframes toastIn{0%{transform:translate(-50%,-30px);opacity:0}100%{transform:translate(-50%,0);opacity:1}}
+body.anim .a-in{animation:flipIn .75s ease-out}
+body.anim .a-wrong{animation:shake .5s ease,fadeWrong 1.8s ease forwards}
+body.anim .a-steal{animation:flyIn .85s cubic-bezier(.2,.8,.3,1.25)}
+body.anim .a-flip{animation:flipIn .6s ease-out}
+body.anim .status.pulse{animation:pulse .45s ease 3}
+@media (prefers-reduced-motion:reduce){body.anim *{animation:none!important}}
+.toast{position:fixed;left:50%;top:16px;transform:translateX(-50%);background:var(--accent);color:var(--on-accent);padding:10px 20px;border-radius:999px;font-weight:800;z-index:90;box-shadow:0 10px 30px rgba(0,0,0,.4);white-space:nowrap;animation:toastIn .3s ease}
+/* ---------- connection banner ---------- */
+.netbar{position:fixed;left:0;right:0;top:0;z-index:95;text-align:center;padding:9px;font-weight:700;font-size:14px;background:#b45309;color:#fff}
+.netbar.ok{background:#15803d}
+/* ---------- card details ---------- */
+.result{cursor:pointer}
+.cd-cover{width:100%;max-width:240px;aspect-ratio:1;object-fit:cover;border-radius:14px;display:block;margin:0 auto 12px;background:var(--field)}
+.cd-y{font-size:44px;font-weight:900;color:var(--accent2);line-height:1;text-align:center}
+.cd-t{font-size:20px;font-weight:800;text-align:center;margin-top:6px}
+.cd-a{color:var(--muted);text-align:center;margin-bottom:10px}
+.cd-row{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
+.cd-row span:first-child{color:var(--muted)}
+.cd-fact{background:var(--field);border-radius:12px;padding:12px;margin-top:12px;font-size:14px;line-height:1.5}
+/* ---------- tour ---------- */
+.tour-slide{text-align:center;min-height:210px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.tour-ico{font-size:58px;line-height:1}
+.dots{display:flex;gap:6px;justify-content:center;margin:12px 0}
+.dots i{width:8px;height:8px;border-radius:50%;background:var(--line)}
+.dots i.on{background:var(--accent)}
+/* ---------- settings ---------- */
+.seg2{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;margin:6px 0 12px}
+.seg2 button{border:2px solid var(--line);background:var(--field);color:var(--text);border-radius:10px;padding:8px 4px;font:inherit;font-size:13px;cursor:pointer}
+.seg2 button.on{border-color:var(--accent);background:var(--hi)}
+.lbl{font-size:13px;color:var(--muted);margin-top:4px}
+.mini{background:none;border:1px solid var(--line);color:var(--text);border-radius:10px;height:40px;min-width:40px;cursor:pointer;font-size:16px}
 </style>
 </head>
 <body>
 <div class="app">
   <header>
-    <a class="logo" href="./">Song<span>Line</span></a><span class="pill">ONLINE</span><span class="muted" style="font-size:11px" title="All phones should show the same version">v13</span>
+    <a class="logo" href="./">Song<span>Line</span></a><span class="pill">ONLINE</span><span class="muted" style="font-size:11px" title="All phones should show the same version">v14</span>
     <nav>
       <button class="burger" id="menuBtn" aria-label="Menu" aria-expanded="false">☰</button>
       <div class="menu hidden" id="menu">
         <button class="mi hidden" id="histBtn"><span class="ic">📜</span>History</button>
-        <button class="mi" id="themeBtn"><span class="ic">🎨</span>Colors</button>
+        <button class="mi" id="themeBtn"><span class="ic">🎨</span>Look &amp; feel</button>
+        <button class="mi" id="tourBtn"><span class="ic">❓</span>How to play</button>
         <a class="mi" href="./"><span class="ic">🏠</span>Main page</a>
         <hr class="hidden" id="leaveSep">
         <button class="mi hidden" id="leaveBtn"><span class="ic">🚪</span>Leave room</button>
@@ -318,7 +400,9 @@ nav{margin-left:auto;position:relative}
       <div class="tl-head">
         <b>Timeline</b>
         <select class="inp" id="viewSel"></select>
+        <button class="mini" id="layoutBtn" title="Switch between list and table view"></button>
       </div>
+      <div id="dragBox" class="hidden"><div class="tcard mystery dragsrc" id="dragSrc">🎵 Drag me into your timeline ↓</div></div>
       <div class="tl" id="tl"></div>
       <button class="btn big hidden" id="lockBtn" style="margin-top:12px">🔒 Lock in my guess</button>
       <div class="row hidden" id="tlActions" style="justify-content:center;margin-top:10px">
@@ -358,17 +442,48 @@ nav{margin-left:auto;position:relative}
 
 <div class="modal hidden" id="themeModal">
   <div class="modal-box">
-    <h2 style="margin:0 0 4px">🎨 Colors</h2>
-    <p class="muted" style="margin:0">Only changes this phone. Your main color also marks your name on everyone's scoreboard.</p>
+    <h2 style="margin:0 0 4px">🎨 Look &amp; feel</h2>
+    <p class="muted" style="margin:0 0 8px">Only changes this phone. Your main color also marks your name on everyone's scoreboard.</p>
+    <div class="lbl">Mode</div>
+    <div class="seg2" data-pref="mode"><button data-v="dark">🌙 Dark</button><button data-v="light">☀ Light</button></div>
+    <div class="lbl">Colors</div>
     <div class="swatches" id="swatches"></div>
     <div class="colrow"><span>Main color</span><input type="color" id="cAccent"></div>
     <div class="colrow"><span>Second color</span><input type="color" id="cAccent2"></div>
-    <div class="row" style="margin-top:12px;justify-content:space-between">
-      <button class="btn ghost sm" id="themeReset">Reset</button>
+    <div class="lbl">Timeline layout</div>
+    <div class="seg2" data-pref="layout"><button data-v="list">☰ List</button><button data-v="table">🃏 Table</button></div>
+    <div class="lbl">Card art</div>
+    <div class="seg2" data-pref="art"><button data-v="plain">Plain</button><button data-v="covers">💿 Album covers</button></div>
+    <div class="lbl">Text size</div>
+    <div class="seg2" data-pref="size"><button data-v="1">A</button><button data-v="1.15" style="font-size:15px">A+</button><button data-v="1.3" style="font-size:17px">A++</button></div>
+    <div class="lbl">Animations</div>
+    <div class="seg2" data-pref="anim"><button data-v="on">On</button><button data-v="off">Off</button></div>
+    <div class="lbl">Turn alerts (vibrate + flash)</div>
+    <div class="seg2" data-pref="alerts"><button data-v="on">On</button><button data-v="off">Off</button></div>
+    <div class="row" style="margin-top:8px;justify-content:space-between">
+      <button class="btn ghost sm" id="themeReset">Reset all</button>
       <button class="btn" data-close>Done</button>
     </div>
   </div>
 </div>
+
+<div class="modal hidden" id="cardModal">
+  <div class="modal-box" id="cdBody"></div>
+</div>
+
+<div class="modal hidden" id="tourModal">
+  <div class="modal-box">
+    <div class="tour-slide" id="tourSlide"></div>
+    <div class="dots" id="tourDots"></div>
+    <div class="row" style="justify-content:space-between">
+      <button class="btn ghost sm" id="tourSkip">Skip</button>
+      <div class="row"><button class="btn secondary sm" id="tourBack">Back</button><button class="btn sm" id="tourNext">Next</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="netbar hidden" id="netbar"></div>
+<div class="toast hidden" id="toast"></div>
 
 <div class="modal hidden" id="pModal">
   <div class="modal-box" style="text-align:center">
@@ -430,13 +545,23 @@ const THEMES = {
 const hex2rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
 const mix = (a, b, t) => '#' + hex2rgb(a).map((v, i) => Math.round(v + (hex2rgb(b)[i] - v) * t).toString(16).padStart(2, '0')).join('');
 const lumOf = h => { const c = hex2rgb(h).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; };
-function themeNow(){ const t = store.json('ui_theme', {}); return {...THEMES[t.preset] || THEMES.neon, ...(t.accent ? {accent: t.accent} : {}), ...(t.accent2 ? {accent2: t.accent2} : {}), preset: t.preset || 'neon'}; }
+function themeNow(){ const t = store.json('ui_theme', {}); return {...THEMES[t.preset] || THEMES.neon, ...(t.accent ? {accent: t.accent} : {}), ...(t.accent2 ? {accent2: t.accent2} : {}), preset: t.preset || 'neon', mode: t.mode === 'light' ? 'light' : 'dark'}; }
+const PREF_DEF = {layout: 'list', art: 'covers', size: '1', anim: 'on', alerts: 'on'};
+const prefs = () => ({...PREF_DEF, ...store.json('ui_prefs', {})});
+function applyPrefs(){ const p = prefs(); document.body.style.zoom = p.size; document.body.classList.toggle('anim', p.anim === 'on'); }
+function setPref(k, v){ store.set('ui_prefs', JSON.stringify({...store.json('ui_prefs', {}), [k]: v})); applyPrefs(); renderThemePicker(); if (room) render(); }
 function applyTheme(){
-  const t = themeNow(), r = document.documentElement.style;
+  const t = themeNow(), r = document.documentElement.style, light = t.mode === 'light';
+  if (light){
+    t.bg = '#f5f3fb'; t.panel = '#ffffff'; t.line = '#e2ddef';
+    if (lumOf(t.accent) > .6) t.accent = '#374151';          // very light accents vanish on white
+    if (lumOf(t.accent2) > .6) t.accent2 = mix(t.accent2, '#000000', .45);
+  }
+  document.body.classList.toggle('light', light);
   r.setProperty('--accent', t.accent); r.setProperty('--accent2', t.accent2); r.setProperty('--accent3', t.accent3);
   r.setProperty('--bg', t.bg); r.setProperty('--panel', t.panel); r.setProperty('--line', t.line);
-  r.setProperty('--btn2', mix(t.panel, t.line, .55)); r.setProperty('--field', mix(t.bg, '#000000', .25));
-  r.setProperty('--card', mix(t.panel, t.line, .45)); r.setProperty('--hi', mix(t.panel, t.accent, .22));
+  r.setProperty('--btn2', light ? '#ece9f6' : mix(t.panel, t.line, .55)); r.setProperty('--field', light ? '#f1eef9' : mix(t.bg, '#000000', .25));
+  r.setProperty('--card', light ? '#f3f0fb' : mix(t.panel, t.line, .45)); r.setProperty('--hi', mix(t.panel, t.accent, light ? .14 : .22));
   r.setProperty('--on-accent', lumOf(t.accent) > .45 ? '#111111' : '#ffffff');
   document.querySelector('meta[name=theme-color]')?.setAttribute('content', t.bg);
   return t;
@@ -445,7 +570,13 @@ function renderThemePicker(){
   const t = themeNow();
   $('#swatches').innerHTML = Object.entries(THEMES).map(([k, v]) => `<button class="sw ${t.preset === k ? 'on' : ''}" data-theme="${k}"><i style="background:${v.accent}"></i><i style="background:${v.accent2}"></i><br>${v.name}</button>`).join('');
   $('#cAccent').value = t.accent; $('#cAccent2').value = t.accent2;
+  const p = {...prefs(), mode: t.mode};
+  $$('#themeModal [data-pref]').forEach(g => g.querySelectorAll('[data-v]').forEach(b => b.classList.toggle('on', String(p[g.dataset.pref]) === b.dataset.v)));
 }
+$('#themeModal').addEventListener('click', e => {
+  const b = e.target.closest('[data-v]'), g = b && b.closest('[data-pref]'); if (!g) return;
+  if (g.dataset.pref === 'mode') setTheme({mode: b.dataset.v}); else setPref(g.dataset.pref, b.dataset.v);
+});
 function setTheme(patch){
   const cur = store.json('ui_theme', {});
   store.set('ui_theme', JSON.stringify({...cur, ...patch}));
@@ -456,8 +587,26 @@ $('#themeBtn').onclick = () => { renderThemePicker(); $('#themeModal').classList
 $('#swatches').onclick = e => { const b = e.target.closest('[data-theme]'); if (b) setTheme({preset: b.dataset.theme, accent: null, accent2: null}); };
 $('#cAccent').oninput = e => setTheme({accent: e.target.value});
 $('#cAccent2').oninput = e => setTheme({accent2: e.target.value});
-$('#themeReset').onclick = () => { store.del('ui_theme'); applyTheme(); renderThemePicker(); setTheme({}); };
-applyTheme();
+$('#themeReset').onclick = () => { store.del('ui_theme'); store.del('ui_prefs'); applyTheme(); applyPrefs(); setTheme({}); if (room) render(); };
+applyTheme(); applyPrefs();
+
+// ---------- small helpers: toast, alerts, connection banner ----------
+let toastT = null;
+function toast(text){ const t = $('#toast'); t.textContent = text; t.classList.remove('hidden'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.add('hidden'), 2600); }
+function alertMe(text){
+  if (prefs().alerts !== 'on') return;
+  if (navigator.vibrate) navigator.vibrate([140, 70, 140]);
+  toast(text);
+  const st = $('#status'); st.classList.remove('pulse'); void st.offsetWidth; st.classList.add('pulse');
+}
+let netTimer = null;
+function showNet(state){
+  const b = $('#netbar'); clearTimeout(netTimer);
+  if (state === 'down'){ b.className = 'netbar'; b.textContent = '📡 Connection lost. Reconnecting…'; b.dataset.down = '1'; }
+  else if (state === 'up' && b.dataset.down){ delete b.dataset.down; b.className = 'netbar ok'; b.textContent = '✓ Back online'; netTimer = setTimeout(() => b.classList.add('hidden'), 2000); }
+}
+window.addEventListener('offline', () => showNet('down'));
+window.addEventListener('online', () => showNet('up'));
 
 // ================= Firebase config =================
 const b64e = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -672,6 +821,7 @@ function enterRoom(c){
     render();
   }, err => msg('Connection error: ' + esc(err.message)));
   $('#histBtn').classList.remove('hidden'); $('#leaveBtn').classList.remove('hidden'); $('#leaveSep').classList.remove('hidden');
+  if (!store.get('tour_v1')) setTimeout(openTour, 400);
 }
 function leave(){
   if (unsub){ unsub(); unsub = null; }
@@ -687,13 +837,36 @@ $('#leaveBtn').onclick = async () => {
   await fb.set(R(`players/${me}/online`), false).catch(() => {}); leave();
 };
 
+// ================= how-to-play tour =================
+const TOUR = [
+  ['🎵', 'Build your timeline', 'Every card is a song. Collect cards and keep them in order of release year. The first player to reach the target wins.'],
+  ['👂', 'Your turn', 'The host plays a mystery song. Drag the 🎵 card into your timeline (or tap a gap) where you think it belongs, then lock in.'],
+  ['🕵', 'Tokens', 'Skip a song for 1 🪙, steal a card when you think someone is wrong for 1 🪙, or get a free card for 3 🪙. Name the title and artist to earn a token.'],
+  ['💿', 'Explore the cards', 'Tap any revealed card to see the album, release date and a fact about the song. Change colors, layout and text size in ☰ → Look & feel.']
+];
+let tourI = 0;
+function renderTour(){
+  const [ico, title, text] = TOUR[tourI];
+  $('#tourSlide').innerHTML = `<div class="tour-ico">${ico}</div><h2 style="margin:6px 0 0">${title}</h2><p class="muted" style="margin:0;font-size:15px">${text}</p>`;
+  $('#tourDots').innerHTML = TOUR.map((_, i) => `<i class="${i === tourI ? 'on' : ''}"></i>`).join('');
+  $('#tourBack').classList.toggle('hidden', tourI === 0);
+  $('#tourNext').textContent = tourI === TOUR.length - 1 ? "Let's play!" : 'Next';
+}
+function openTour(){ tourI = 0; renderTour(); $('#tourModal').classList.remove('hidden'); }
+function closeTour(){ $('#tourModal').classList.add('hidden'); store.set('tour_v1', '1'); }
+$('#tourBtn').onclick = openTour;
+$('#tourSkip').onclick = closeTour;
+$('#tourBack').onclick = () => { tourI = Math.max(0, tourI - 1); renderTour(); };
+$('#tourNext').onclick = () => { if (tourI < TOUR.length - 1){ tourI++; renderTour(); } else closeTour(); };
+
 // ================= rendering =================
-let renderQueued = false;
+let renderQueued = false, pendingRender = false, drag = null, animatedN = null, lastAlert = '';
 function render(){
   if (renderQueued) return;
   renderQueued = true;
   queueMicrotask(() => {
     renderQueued = false;
+    if (drag){ pendingRender = true; return; }
     try { renderNow(); }
     catch(e){ console.error(e); msg('Display error: ' + esc(e.message) + '. Please tell the host / reload.'); }
   });
@@ -766,6 +939,7 @@ const startDealsPending = () => entries(room.deals).some(([, d]) => d.why === 's
 
 function renderGame(){
   show('s-game');
+  const animNow = room.round?.state === 'revealed' && room.round.n !== animatedN;
   const o = order(), act = active(), round = room.round || {state: 'idle'}, pl = room.placement || {};
   const target = room.settings?.target ?? 10, host = isHost(), w = room.winner, myTurn = act === me;
   const ch = room.challenges || {};
@@ -815,7 +989,7 @@ function renderGame(){
   $('#status').innerHTML = status; $('#sub').innerHTML = sub;
   // result card
   const rc = round.card;
-  $('#resultBox').innerHTML = round.state === 'revealed' && rc ? `<div class="result ${round.correct ? 'ok' : 'bad'}"><div class="y">${esc(rc.y)}</div><b>${esc(rc.n)}</b><div class="muted">${esc(rc.a)}</div>${!round.correct ? `<div class="muted" style="margin-top:6px">${round.owner ? `🕵 Goes to ${esc(pname(round.owner))}'s timeline` : 'Nobody gets this card.'}</div>` : ''}</div>` : '';
+  $('#resultBox').innerHTML = round.state === 'revealed' && rc ? `<div class="result ${round.correct ? 'ok' : 'bad'} ${animNow ? 'a-flip' : ''}" data-rc="1" title="Tap for details"><div class="y">${esc(rc.y)}</div><b>${esc(rc.n)}</b><div class="muted">${esc(rc.a)}</div>${!round.correct ? `<div class="muted" style="margin-top:6px">${round.owner ? `🕵 Goes to ${esc(pname(round.owner))}'s timeline` : 'Nobody gets this card.'}</div>` : ''}</div>` : '';
   // token bar
   renderTokens(round, pl, ch, myTurn, w);
   // host panel
@@ -850,11 +1024,19 @@ function renderGame(){
     $('#dealBox').innerHTML = ds.length && !dm && st !== 'scan' ? ds.map(([k, d]) => `<div class="deal">🎁 ${esc(pname(d.uid))} gets a ${d.why === 'start' ? 'starting' : 'bought'} card<br><button class="btn sm" data-deal="${k}" style="margin-top:6px">📷 Scan their card</button></div>`).join('') : '';
   }
   // timeline selector
-  const followUid = ['playing', 'challenge', 'revealed'].includes(round.state) ? round.player : me;
+  const stolenTo = round.state === 'revealed' && !round.correct && round.owner && round.owner !== round.player ? round.owner : null;
+  const followUid = stolenTo || (['playing', 'challenge', 'revealed'].includes(round.state) ? round.player : me);
   const viewUid = stealMode ? act : viewSel !== 'auto' && players()[viewSel] ? viewSel : followUid;
   $('#viewSel').innerHTML = `<option value="auto">Follow the turn</option>` + o.map(u => `<option value="${u}">${esc(pname(u))}${u === me ? ' (you)' : ''}</option>`).join('');
   $('#viewSel').value = players()[viewSel] ? viewSel : 'auto';
-  renderTimeline(viewUid, round, pl, ch);
+  renderTimeline(viewUid, round, pl, ch, animNow);
+  if (animNow) animatedN = round.n;
+  // turn alerts: fire once when something needs *my* attention
+  const key = w ? '' : (myTurn && round.state === 'idle' && !startDealsPending()) ? 'turn' + (round.n || 0)
+    : (myTurn && round.state === 'playing' && !pl.locked) ? 'place' + round.n
+    : undecided().includes(me) ? 'steal' + round.n : '';
+  if (key && key !== lastAlert) alertMe(key.startsWith('turn') ? '🎯 Your turn!' : key.startsWith('place') ? '🎵 Place the song!' : '🕵 Steal or pass?');
+  lastAlert = key;
   syncProxies();
 }
 $('#score').onclick = e => { const b = e.target.closest('[data-p]'); if (b && isHost()){ pmUid = b.dataset.p; renderPM(); $('#pModal').classList.remove('hidden'); } };
@@ -905,48 +1087,142 @@ function syncProxies(){
 $('#tlActions').onclick = e => { const b = e.target.closest('[data-proxy]'); if (b && !b.disabled) $('#' + b.dataset.proxy).click(); };
 $('#tokBuy').onclick = () => { if (confirm('Spend 3 tokens for a free card in your timeline?')) sendAction({type: 'buy'}); };
 
-function renderTimeline(uid, round, pl, ch){
+const decadeOf = y => { const d = Math.floor(+y / 10) * 10; return isFinite(d) && d > 0 ? (d < 2000 ? `${d % 100 || '00'}s` : `${d}s`) : ''; };
+const okUrl = u => /^https:\/\/[^'"()\s]+$/.test(u || '');
+function renderTimeline(uid, round, pl, ch, animNow){
+  const P = prefs(), horiz = P.layout === 'table', art = P.art === 'covers';
+  $('#tl').classList.toggle('h', horiz);
+  $('#layoutBtn').textContent = horiz ? '☰' : '🃏';
   const cards = timeline(uid);
   const isTurn = round.player === uid;
   const placing = round.state === 'playing' && isTurn;
   const canPlace = placing && uid === me;
   const challenge = round.state === 'challenge' && isTurn;
-  let html = '';
-  const card = (c, cls = '') => `<div class="tcard ${cls}"><div class="y">${esc(c.y)}</div><div><div class="t">${esc(c.n)}</div><div class="a">${esc(c.a)}</div></div></div>`;
-  const mystery = `<div class="tcard mystery">🎵 ? ${pl.locked || round.state === 'challenge' ? '🔒 ' + esc(pname(uid)) : ''}</div>`;
+  const cover = c => !art ? '' : okUrl(c.c) ? `<img class="cv" src="${esc(c.c)}" alt="" loading="lazy">` : horiz ? '<div class="cv nocv">💿</div>' : '';
+  const card = (c, cls = '', attrs = '') => `<div class="tcard ${cls}" ${attrs}>${cover(c)}<div class="y">${esc(c.y)}</div><div class="tx"><div class="t" dir="auto">${esc(c.n)}</div><div class="a" dir="auto">${esc(c.a)}</div></div></div>`;
+  const cardAt = (c, cls = '') => card(c, cls, c.k ? `data-card="${esc(uid)}|${esc(c.k)}"` : '');
+  const mystery = `<div class="tcard mystery ${canPlace ? 'dragsrc' : ''}">🎵 ? ${pl.locked || round.state === 'challenge' ? '🔒 ' + esc(pname(uid)) : canPlace ? '<span class="muted" style="font-size:12px;color:inherit;opacity:.8">drag</span>' : ''}</div>`;
   const stealers = i => Object.entries(ch).filter(([, c]) => c.slot === i).map(([u]) => `<div class="steal-tag">🕵 ${esc(pname(u))} bets here</div>`).join('');
   const taken = i => i === pl.slot || Object.values(ch).some(c => c.slot === i);
+  let lastDec = null;
+  const dec = c => { const d = decadeOf(c.y); if (d && d !== lastDec){ lastDec = d; return `<div class="decade">${d}</div>`; } return ''; };
+  let html = '';
   if (placing || challenge){
     for (let i = 0; i <= cards.length; i++){
       if (pl.slot === i) html += mystery;
-      else if (canPlace) html += `<button class="gap" data-slot="${i}">＋ ${slotLabel(cards, i).replace(/^./, c => c.toUpperCase())}</button>`;
-      else if (challenge && stealMode && !taken(i)) html += `<button class="gap" data-steal="${i}">🕵 Steal: ${slotLabel(cards, i)}</button>`;
+      else if (canPlace){ const l = slotLabel(cards, i).replace(/^./, c => c.toUpperCase()); html += `<button class="gap" data-slot="${i}" title="${esc(l)}">＋<span class="gl"> ${esc(l)}</span></button>`; }
+      else if (challenge && stealMode && !taken(i)){ const l = slotLabel(cards, i); html += `<button class="gap" data-steal="${i}" title="Steal: ${esc(l)}">🕵<span class="gl"> Steal: ${esc(l)}</span></button>`; }
       html += stealers(i);
-      if (i < cards.length) html += card(cards[i]);
+      if (i < cards.length) html += dec(cards[i]) + cardAt(cards[i]);
     }
   } else if (round.state === 'revealed' && isTurn && round.card){
     const rc = round.card;
-    if (round.correct) html = cards.map(c => card(c, c.k === round.cardKey ? 'new' : '')).join('');
+    if (round.correct) html = cards.map(c => dec(c) + cardAt(c, c.k === round.cardKey ? 'new ' + (animNow ? 'a-in' : '') : '')).join('');
     else {
       for (let i = 0; i <= cards.length; i++){
-        if (round.slot === i) html += card({...rc, n: rc.n + ' ✗', a: 'Wrong spot'}, 'wrong');
-        if (i < cards.length) html += card(cards[i]);
+        if (round.slot === i) html += card({...rc, n: rc.n + ' ✗', a: 'Wrong spot'}, 'wrong ' + (animNow ? 'a-wrong' : ''), 'data-rc="1"');
+        if (i < cards.length) html += dec(cards[i]) + cardAt(cards[i]);
       }
     }
   } else if (round.state === 'revealed' && round.owner === uid && round.cardKey){
-    html = cards.map(c => card(c, c.k === round.cardKey ? 'new' : '')).join('');
+    html = cards.map(c => dec(c) + cardAt(c, c.k === round.cardKey ? 'new ' + (animNow ? 'a-steal' : '') : '')).join('');
   } else {
-    html = cards.map(c => card(c)).join('');
+    html = cards.map(c => dec(c) + cardAt(c)).join('');
   }
   $('#tl').innerHTML = html || `<div class="empty">${uid === me ? 'Your starting card is on its way…' : esc(pname(uid)) + ' has no cards yet.'}</div>`;
   $('#lockBtn').classList.toggle('hidden', !(canPlace && pl.slot != null));
+  $('#dragBox').classList.toggle('hidden', !(canPlace && pl.slot == null));
+  if (horiz && (placing || challenge)){ const m = $('#tl .mystery') || $('#tl .gap'); if (m && !drag) m.scrollIntoView({block: 'nearest', inline: 'center'}); }
 }
+$('#layoutBtn').onclick = () => setPref('layout', prefs().layout === 'table' ? 'list' : 'table');
 $('#tl').onclick = e => {
   const s = e.target.closest('[data-slot]');
   if (s) return fb.set(R('placement'), {slot: +s.dataset.slot, locked: false, by: me});
   const st = e.target.closest('[data-steal]');
-  if (st){ stealMode = false; sendAction({type: 'steal', slot: +st.dataset.steal}); }
+  if (st){ stealMode = false; sendAction({type: 'steal', slot: +st.dataset.steal}); return; }
+  const c = e.target.closest('[data-card]');
+  if (c){ const [u, k] = c.dataset.card.split('|'); const card = room?.timelines?.[u]?.[k]; if (card) openCard(card); return; }
+  if (e.target.closest('[data-rc]') && room?.round?.card) openCard(room.round.card);
 };
+$('#resultBox').onclick = e => { if (e.target.closest('[data-rc]') && room?.round?.card) openCard(room.round.card); };
+
+// ---------- drag the mystery card into place (touch + mouse) ----------
+document.addEventListener('pointerdown', e => {
+  const src = e.target.closest('.dragsrc'); if (!src) return;
+  e.preventDefault();
+  const g = src.cloneNode(true); g.classList.add('dragghost'); g.classList.remove('dragsrc'); g.removeAttribute('id');
+  g.style.width = Math.min(src.offsetWidth || 160, 240) + 'px';
+  document.body.appendChild(g);
+  drag = {g, near: null};
+  moveDrag(e);
+});
+function moveDrag(e){
+  if (!drag) return;
+  drag.g.style.left = e.clientX + 'px'; drag.g.style.top = e.clientY + 'px';
+  let best = null, bd = Infinity;
+  $$('#tl .gap[data-slot]').forEach(g => { const r = g.getBoundingClientRect(); const d = Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2)); if (d < bd){ bd = d; best = g; } });
+  $$('#tl .gap.near').forEach(g => g.classList.remove('near'));
+  drag.near = best && bd < 170 ? best : null;
+  if (drag.near) drag.near.classList.add('near');
+  const tl = $('#tl'), r = tl.getBoundingClientRect();
+  if (tl.classList.contains('h')){ if (e.clientX < r.left + 36) tl.scrollLeft -= 14; else if (e.clientX > r.right - 36) tl.scrollLeft += 14; }
+  else { if (e.clientY < 60) window.scrollBy(0, -14); else if (e.clientY > innerHeight - 60) window.scrollBy(0, 14); }
+}
+document.addEventListener('pointermove', moveDrag);
+function endDrag(){
+  if (!drag) return;
+  const n = drag.near; drag.g.remove(); drag = null;
+  if (n){ if (navigator.vibrate) navigator.vibrate(30); fb.set(R('placement'), {slot: +n.dataset.slot, locked: false, by: me}); }
+  pendingRender = false; render();
+}
+document.addEventListener('pointerup', endDrag);
+document.addEventListener('pointercancel', endDrag);
+
+// ---------- card details (+ a fact from Wikipedia) ----------
+const fmtDate = d => { if (!d) return ''; const p = String(d).split('-'); if (p.length === 1) return p[0]; try { return new Date(d).toLocaleDateString(undefined, p.length === 3 ? {year: 'numeric', month: 'long', day: 'numeric'} : {year: 'numeric', month: 'long'}); } catch(e){ return d; } };
+async function wikiFact(c){
+  const key = 'wk_' + c.id, cached = store.json(key, null);
+  if (cached) return cached;
+  const he = /[֐-׿]/.test((c.n || '') + (c.a || ''));
+  const lang = he ? 'he' : 'en';
+  const title = cleanTitle(c.n) || c.n || '', artist = String(c.a || '').split(',')[0], album = cleanTitle(c.al || '');
+  const tries = [[`${title} ${artist}`, 'song']];
+  if (!he) tries.unshift([`"${title}" song ${artist}`, 'song']);
+  if (album && norm(album) !== norm(title)) tries.push([`${album} ${artist} album`, 'album']);
+  for (const [q, about] of tries){
+    try {
+      const d = await (await fetch(`https://${lang}.wikipedia.org/w/api.php?action=query&list=search&format=json&origin=*&srlimit=5&srsearch=${encodeURIComponent(q)}`)).json();
+      const want = norm(about === 'song' ? title : album);
+      const hit = (d.query?.search || []).find(x => want && norm(x.title).includes(want));
+      if (!hit) continue;
+      const sm = await (await fetch(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(hit.title.replace(/ /g, '_'))}`)).json();
+      if (!sm.extract) continue;
+      const sent = sm.extract.match(/[^.!?]+[.!?]+(\s|$)/g) || [sm.extract];
+      const fact = (sent.length > 1 ? sent.slice(1, 3) : sent).join(' ').trim();
+      const res = {fact, title: sm.title, about, url: sm.content_urls?.mobile?.page || sm.content_urls?.desktop?.page || ''};
+      store.set(key, JSON.stringify(res)); return res;
+    } catch(e){}
+  }
+  const none = {none: true}; store.set(key, JSON.stringify(none)); return none;
+}
+async function openCard(c){
+  const sp = `https://open.spotify.com/track/${encodeURIComponent(c.id)}`;
+  $('#cdBody').innerHTML = `${okUrl(c.c) ? `<img class="cd-cover" src="${esc(c.c)}" alt="">` : '<div class="cd-cover nocv" style="font-size:70px">💿</div>'}
+    <div class="cd-y">${esc(c.y)}</div>
+    <div class="cd-t" dir="auto">${esc(c.n)}</div>
+    <div class="cd-a" dir="auto">${esc(c.a)}</div>
+    ${c.al ? `<div class="cd-row"><span>Album</span><b dir="auto">${esc(c.al)}</b></div>` : ''}
+    ${c.d ? `<div class="cd-row"><span>Album released</span><b>${esc(fmtDate(c.d))}</b></div>` : ''}
+    <div class="cd-row"><span>Year on the card</span><b>${esc(c.y)}</b></div>
+    <div class="cd-fact" id="cdFact"><span class="muted">📖 Looking for a fact about this song…</span></div>
+    <div class="row" style="margin-top:12px;justify-content:space-between"><a class="btn ghost sm" href="${sp}" target="_blank" rel="noopener" style="text-decoration:none">Open in Spotify</a><button class="btn sm" data-close>Close</button></div>`;
+  $('#cdBody [data-close]').onclick = () => $('#cardModal').classList.add('hidden');
+  $('#cardModal').classList.remove('hidden');
+  const f = await wikiFact(c);
+  const box = $('#cdFact'); if (!box) return;
+  box.innerHTML = f.none ? '<span class="muted">📖 No fun fact found for this one.</span>'
+    : `<b>📖 ${f.about === 'album' ? 'About the album' : 'Did you know?'}</b><br><span dir="auto">${esc(f.fact)}</span>${f.url ? `<br><a href="${esc(f.url)}" target="_blank" rel="noopener" style="color:var(--accent2);font-size:13px">From Wikipedia: ${esc(f.title)}</a>` : ''}`;
+}
 $('#lockBtn').onclick = () => fb.set(R('placement/locked'), true);
 
 // ---------- host: collapsible controls + one big "what's next" button ----------
@@ -981,16 +1257,24 @@ async function onScanned(id){
   try {
     const t = await sp('/tracks/' + id);
     const over = store.json('year_overrides', {});
-    const c = {id, y: over[id] || (t.album?.release_date || '').slice(0, 4), n: t.name, a: t.artists.map(a => a.name).join(', ')};
+    const c = {id, y: over[id] || (t.album?.release_date || '').slice(0, 4), n: t.name, a: t.artists.map(a => a.name).join(', '), c: trackCover(t), al: t.album?.name || '', d: t.album?.release_date || ''};
     if (purpose && room.deals?.[purpose]) await giveDeal(purpose, c);
     else await startSong(c);
   } catch(e){ songError(e); }
   render();
 }
+const trackCover = t => (t?.album?.images || [])[1]?.url || (t?.album?.images || [])[0]?.url || '';
+function cardOf(a){ const o = {id: a.id, y: a.y, n: a.n, a: a.a}; if (a.c) o.c = a.c; if (a.al) o.al = a.al; if (a.d) o.d = a.d; return o; }
+async function enrich(a){
+  if (a.al && a.c) return a;
+  try { const t = await sp('/tracks/' + a.id); return {...a, c: a.c || trackCover(t), al: a.al || t.album?.name || '', d: a.d || t.album?.release_date || ''}; }
+  catch(e){ return a; }
+}
 async function startSong(ans){
   const act = active();
   if (!act){ msg('No players in the game.'); return; }
   answer = ans; store.set('party_answer', JSON.stringify(answer));
+  enrich(ans).then(x => { if (answer && answer.id === x.id){ answer = x; store.set('party_answer', JSON.stringify(answer)); } });
   used.add(ans.id); store.set('party_used', JSON.stringify([...used]));
   await fb.update(R(), {round: {state: 'playing', n: (room.round?.n || 0) + 1, player: act, started: Date.now()}, placement: null, challenges: null, passes: null});
   try { await playId(ans.id); } catch(e){ songError(e); }
@@ -1010,7 +1294,7 @@ function draw(){
   if (!left.length){ msg('Every song in the list has been played. Load more songs in the lobby, or scan printed cards.', 'info'); render(); return; }
   const t = left[Math.floor(Math.random() * left.length)];
   const over = store.json('year_overrides', {});
-  startSong({id: t.id, y: over[t.id] || t.y, n: t.n, a: t.a}).then(render);
+  startSong({...t, y: over[t.id] || t.y}).then(render);
 }
 $('#drawBtn').onclick = draw;
 function setDeck(list, label){
@@ -1086,7 +1370,7 @@ $('#loadDeck').onclick = async () => {
         for (const it of d.items || []){
           const t = it.item || it.track;
           if (!t || t.is_local || (t.type && t.type !== 'track') || !t.id) continue;
-          list.push({id: t.id, y: (t.album?.release_date || '').slice(0, 4), n: t.name, a: (t.artists || []).map(a => a.name).join(', ')});
+          list.push({id: t.id, y: (t.album?.release_date || '').slice(0, 4), n: t.name, a: (t.artists || []).map(a => a.name).join(', '), c: trackCover(t), al: t.album?.name || '', d: t.album?.release_date || ''});
         }
         url = d.next;
         $('#deckState').textContent = `Loading… ${list.length} songs`;
@@ -1118,7 +1402,7 @@ $('#csvFile').onchange = async e => {
   const head = (rows.shift() || []).map(h => h.trim().toLowerCase()), col = n => head.indexOf(n);
   const iId = col('spotify_id') >= 0 ? col('spotify_id') : col('id');
   if (iId < 0){ $('#deckState').textContent = 'That file isn\'t a SongLine card list (save one from Make cards on the main page).'; return; }
-  setDeck(rows.map(r => ({id: (parseTrack(r[iId]) || r[iId] || '').trim(), y: (r[col('year')] || '').trim(), n: r[col('title')] || '', a: r[col('artist')] || ''})), f.name);
+  setDeck(rows.map(r => ({id: (parseTrack(r[iId]) || r[iId] || '').trim(), y: (r[col('year')] || '').trim(), n: r[col('title')] || '', a: r[col('artist')] || '', c: col('cover') >= 0 ? (r[col('cover')] || '') : ''})), f.name);
 };
 // ================= host: rules engine =================
 let evaluating = false, busyActions = new Set(), dealing = false, challengeOpening = false, autoRevealT = null;
@@ -1129,9 +1413,9 @@ function fits(cards, s, y){
 function hostDuties(){
   const round = room.round || {}, pl = room.placement || {};
   // 1) player requests (tokens)
-  for (const [k, a] of entries(room.actions)) if (!busyActions.has(k)){ busyActions.add(k); processAction(k, a).finally(() => busyActions.delete(k)); }
+  for (const [k, a] of entries(room.actions)) if (!busyActions.has(k)){ busyActions.add(k); processAction(k, a).finally(() => { busyActions.delete(k); render(); }); }
   // 2) deals in no-cards mode are automatic
-  if (deckMode() && !dealing && entries(room.deals).length){ dealing = true; autoDeals().finally(() => { dealing = false; }); }
+  if (deckMode() && !dealing && entries(room.deals).length){ dealing = true; autoDeals().finally(() => { dealing = false; render(); }); }
   // 3) placement locked: open the steal window (or reveal straight away if nobody can steal)
   // 4) everyone has stolen or passed: reveal automatically
   if (round.state === 'challenge' && !evaluating && !entries(room.actions).length && !undecided().length && !autoRevealT){
@@ -1170,9 +1454,10 @@ async function processAction(k, a){
 }
 async function giveDeal(key, c){
   const d = room.deals?.[key]; if (!d) return;
+  c = cardOf(await enrich(c));
   used.add(c.id); store.set('party_used', JSON.stringify([...used]));
   const k = fb.push(R(`timelines/${d.uid}`)).key;
-  const upd = {[`deals/${key}`]: null, [`timelines/${d.uid}/${k}`]: {id: c.id, y: c.y, n: c.n, a: c.a}};
+  const upd = {[`deals/${key}`]: null, [`timelines/${d.uid}/${k}`]: c};
   upd[`log/${fb.push(R('log')).key}`] = {uid: d.uid, name: pname(d.uid), ...c, kind: d.why, ok: true, t: Date.now()};
   if (d.why === 'buy' && timeline(d.uid).length + 1 >= (room.settings?.target ?? 10)) upd.winner = d.uid;
   await fb.update(R(), upd);
@@ -1182,7 +1467,7 @@ async function autoDeals(){
     const left = deckLeft();
     if (!left.length){ msg('No songs left in the list to deal from.'); return; }
     const t = left[Math.floor(Math.random() * left.length)], over = store.json('year_overrides', {});
-    await giveDeal(k, {id: t.id, y: over[t.id] || t.y, n: t.n, a: t.a});
+    await giveDeal(k, {...t, y: over[t.id] || t.y});
   }
 }
 async function evaluate(){
@@ -1198,7 +1483,7 @@ async function evaluate(){
     const ring = o.slice(start + 1).concat(o.slice(0, start));
     const stealer = ring.find(u => room.challenges?.[u] && fits(cards, room.challenges[u].slot, answer.y)) || null;
     const owner = correct ? uid : stealer;
-    const card = {id: answer.id, y: answer.y, n: answer.n, a: answer.a};
+    const card = cardOf(answer);
     const upd = {'round/state': 'revealed', 'round/card': card, 'round/correct': correct, 'round/slot': s, 'round/stealer': stealer, 'round/owner': owner};
     const logKey = fb.push(R('log')).key;
     upd[`log/${logKey}`] = {uid, name: pname(uid), ...card, ok: correct, stoleBy: !correct && stealer ? pname(stealer) : null, t: Date.now()};
@@ -1275,6 +1560,8 @@ document.addEventListener('click', () => { if (!wake) keepAwake(); }, {once: tru
   if (!cfg){ show('s-config'); msg('This site isn\'t connected to Firebase yet. If you\'re a player, ask the host for the join QR code.', 'info'); return; }
   try { await initFirebase(cfg); }
   catch(e){ show('s-config'); $('#cfgText').value = JSON.stringify(cfg, null, 2); msg('Couldn\'t connect to Firebase: ' + esc(e.message) + '. Check the config and that Anonymous sign-in is enabled.'); return; }
+  let everConnected = false;
+  try { fb.onValue(fb.ref(db, '.info/connected'), sn => { const v = sn.val(); if (v === true){ if (everConnected) showNet('up'); everConnected = true; } else if (v === false && everConnected) showNet('down'); }); } catch(e){}
   $('#spotState').textContent = spToken() ? '✓ Spotify is connected on this phone.' : 'Spotify isn\'t connected on this phone yet.';
   if (spToken()) loadDevices();
   const q = new URLSearchParams(location.search).get('room') || store.get('party_room');
