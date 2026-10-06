@@ -9,7 +9,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <style>
-:root{--bg:#14111f;--panel:#1f1b2e;--line:#332d4a;--text:#f2effa;--muted:#a49cbd;--accent:#ff3d8b;--accent2:#22d3ee;--ok:#34d399;--bad:#f87171;--warn:#fbbf24}
+:root{--bg:#14111f;--panel:#1f1b2e;--line:#332d4a;--text:#f2effa;--muted:#a49cbd;--accent:#ff3d8b;--accent2:#22d3ee;--accent3:#7c3aed;--on-accent:#fff;--btn2:#2c2742;--field:#120f1c;--card:#2a2540;--hi:#3a1f35;--ok:#34d399;--bad:#f87171;--warn:#fbbf24}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
 button,select,input,textarea{font:inherit}
@@ -18,22 +18,21 @@ header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
 .logo{font-weight:800;font-size:22px;letter-spacing:-.5px;color:var(--text);text-decoration:none}
 .logo span{color:var(--accent)}
 .pill{background:var(--accent2);color:#04212a;font-weight:800;font-size:12px;border-radius:999px;padding:2px 8px}
-nav{margin-left:auto;display:flex;gap:6px}
 .icon-btn{background:none;border:1px solid var(--line);color:var(--muted);height:36px;min-width:36px;border-radius:999px;cursor:pointer;padding:0 10px}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px}
 .panel h2{margin:0 0 8px;font-size:18px}
 .muted{color:var(--muted);font-size:14px}
-.btn{background:var(--accent);color:#fff;border:0;border-radius:12px;padding:12px 18px;font-weight:700;cursor:pointer}
-.btn.secondary{background:#2c2742;color:var(--text)}
+.btn{background:var(--accent);color:var(--on-accent);border:0;border-radius:12px;padding:12px 18px;font-weight:700;cursor:pointer}
+.btn.secondary{background:var(--btn2);color:var(--text)}
 .btn.ghost{background:none;border:1px solid var(--line);color:var(--text)}
 .btn.ok{background:#15803d}.btn.bad{background:#b91c1c}
 .btn:disabled{opacity:.45;cursor:default}
 .btn.big{width:100%;padding:18px;font-size:19px;border-radius:16px}
 .btn.sm{padding:8px 12px;font-size:14px}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.inp,textarea{background:#120f1c;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:10px;width:100%}
+.inp,textarea{background:var(--field);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:10px;width:100%}
 textarea{min-height:140px;font:13px/1.4 ui-monospace,Menlo,monospace}
-code{background:#120f1c;padding:2px 6px;border-radius:6px;font-size:13px;word-break:break-all}
+code{background:var(--field);padding:2px 6px;border-radius:6px;font-size:13px;word-break:break-all}
 .msg{padding:10px 12px;border-radius:10px;margin:0 0 12px;font-size:14px}
 .msg.err{background:#3b1323;color:#ffc2d6}
 .msg.info{background:#10283a;color:#bdeaff}
@@ -48,18 +47,18 @@ code{background:#120f1c;padding:2px 6px;border-radius:6px;font-size:13px;word-br
 .num{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0}
 .ctr{display:flex;align-items:center;gap:10px}
 .ctr b{min-width:30px;text-align:center;font-size:20px}
-.ctr button{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:#2c2742;color:var(--text);font-size:20px;cursor:pointer}
+.ctr button{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--btn2);color:var(--text);font-size:20px;cursor:pointer}
 
 /* game */
 .scorebar{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;margin-bottom:8px}
-.chip{flex:0 0 auto;background:#2c2742;border:2px solid transparent;border-radius:12px;padding:6px 10px;color:var(--text);text-align:left;font:inherit}
-.chip.turn{border-color:var(--accent);background:#3a1f35}
+.chip{flex:0 0 auto;background:var(--btn2);border:2px solid transparent;border-radius:12px;padding:6px 10px;color:var(--text);text-align:left;font:inherit}
+.chip.turn{border-color:var(--accent);background:var(--hi)}
 .chip.me b::after{content:" (you)";color:var(--muted);font-weight:400}
 .chip b{display:flex;align-items:center;gap:6px;font-size:14px}
 .chip span{font-size:13px;color:var(--muted);white-space:nowrap}
 .status{font-size:22px;font-weight:800;text-align:center;margin:6px 0 2px}
 .sub{text-align:center;color:var(--muted);font-size:14px;margin-bottom:10px}
-.winner{background:linear-gradient(135deg,#7c3aed,#ff3d8b);border-radius:16px;padding:18px;text-align:center;margin-bottom:14px}
+.winner{background:linear-gradient(135deg,var(--accent3),var(--accent));border-radius:16px;padding:18px;text-align:center;margin-bottom:14px}
 .winner .big{font-size:28px;font-weight:900}
 .result{border-radius:14px;padding:14px;text-align:center;margin:8px 0}
 .result.ok{background:#0f2e22;border:1px solid #166534}
@@ -73,11 +72,11 @@ code{background:#120f1c;padding:2px 6px;border-radius:6px;font-size:13px;word-br
 .eq i:nth-child(2){animation-delay:-.3s}.eq i:nth-child(3){animation-delay:-.6s}
 .eq.paused i{animation-play-state:paused}
 @keyframes eq{0%,100%{height:20%}50%{height:100%}}
-.host{border-color:#7c3aed}
+.host{border-color:var(--accent3)}
 .srcbox{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}
 .seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:6px 0 10px}
 .seg label{border:2px solid var(--line);border-radius:12px;padding:10px;cursor:pointer;font-size:14px;text-align:center}
-.seg label:has(input:checked){border-color:var(--accent);background:#3a1f35}
+.seg label:has(input:checked){border-color:var(--accent);background:var(--hi)}
 .seg input{display:none}
 .pl-list{max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:10px;margin-bottom:8px}
 .pl-list label{display:flex;gap:10px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line);cursor:pointer;font-size:14px}
@@ -88,19 +87,19 @@ code{background:#120f1c;padding:2px 6px;border-radius:6px;font-size:13px;word-br
 .tokhelp{font-size:12px;color:var(--muted);text-align:center}
 .steal-tag{font-size:12px;background:#0e3a44;color:#a5f3fc;border-radius:999px;padding:3px 10px;align-self:center}
 .deal{background:#1d2b1f;border:1px solid #166534;border-radius:12px;padding:10px;margin-bottom:10px;text-align:center}
-.welcome{background:linear-gradient(135deg,#7c3aed,#ff3d8b);border-radius:20px;padding:22px 18px;margin-bottom:14px;text-align:center;font-weight:900;font-size:clamp(26px,8vw,46px);line-height:1.15;white-space:pre-line;overflow-wrap:anywhere;box-shadow:0 10px 30px rgba(255,61,139,.25)}
+.welcome{background:linear-gradient(135deg,var(--accent3),var(--accent));border-radius:20px;padding:22px 18px;margin-bottom:14px;text-align:center;font-weight:900;font-size:clamp(26px,8vw,46px);line-height:1.15;white-space:pre-line;overflow-wrap:anywhere;box-shadow:0 10px 30px rgba(255,61,139,.25)}
 .welcome-count{font-size:12px;color:var(--muted);text-align:left}
-.host h2 .tag{font-size:12px;background:#7c3aed;color:#fff;border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:middle}
+.host h2 .tag{font-size:12px;background:var(--accent3);color:#fff;border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:middle}
 
 /* timeline */
 .tl{display:flex;flex-direction:column;gap:6px}
-.tcard{display:flex;align-items:center;gap:12px;background:#2a2540;border-radius:12px;padding:10px 12px}
+.tcard{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:12px;padding:10px 12px}
 .tcard .y{font-weight:900;font-size:22px;color:var(--accent2);min-width:58px}
 .tcard .t{font-weight:700;font-size:14px;line-height:1.2}
 .tcard .a{color:var(--muted);font-size:13px}
 .tcard.new{outline:2px solid var(--ok)}
 .tcard.wrong{background:#3b1323;outline:2px dashed var(--bad)}
-.tcard.mystery{background:linear-gradient(135deg,#7c3aed,#ff3d8b);justify-content:center;font-weight:800}
+.tcard.mystery{background:linear-gradient(135deg,var(--accent3),var(--accent));justify-content:center;font-weight:800}
 .gap{border:2px dashed var(--line);background:none;color:var(--muted);border-radius:12px;padding:8px;cursor:pointer;font:inherit;font-size:14px}
 .gap:hover{border-color:var(--accent);color:var(--text)}
 .tl-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
@@ -112,16 +111,55 @@ code{background:#120f1c;padding:2px 6px;border-radius:6px;font-size:13px;word-br
 .hist{list-style:none;padding:0;margin:0}
 .hist li{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
 .hist .y{font-weight:800;color:var(--accent2);min-width:44px}
+.linkbtn{background:none;border:0;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:13px;padding:0}
+.dk-tag{font-size:11px;border-radius:6px;padding:1px 6px;margin-left:6px;white-space:nowrap}
+.dk-dup{background:#3a2a0d;color:#ffd98a}.dk-played{background:#0f2e22;color:#86efac}
+.dk-x{background:none;border:0;color:var(--muted);font-size:18px;cursor:pointer;margin-left:auto}
+.hist li.isdup{background:rgba(251,191,36,.07)}
 .hist .who{margin-left:auto;text-align:right;font-weight:700;white-space:nowrap}
+
+/* collapsible host controls */
+.hostbox>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;font-weight:800;font-size:17px}
+.hostbox>summary::-webkit-details-marker{display:none}
+.hostbox>summary .chev{margin-left:auto;color:var(--muted);transition:transform .2s}
+.hostbox[open]>summary .chev{transform:rotate(180deg)}
+.hostbox[open]>summary{margin-bottom:12px}
+.quick{display:flex;gap:8px;margin-bottom:14px}
+.quick .btn{flex:1}
+/* theme picker */
+.swatches{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
+.sw{border:2px solid var(--line);border-radius:12px;padding:10px 6px;cursor:pointer;background:var(--field);color:var(--text);font:inherit;font-size:13px}
+.sw.on{border-color:var(--accent)}
+.sw i{display:inline-block;width:14px;height:14px;border-radius:50%;margin:0 1px;vertical-align:middle}
+.colrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0}
+.colrow input[type=color]{width:52px;height:36px;border:0;background:none;padding:0;cursor:pointer}
+.chip{border-left:5px solid var(--pc,transparent)}
+
+/* hamburger menu */
+nav{margin-left:auto;position:relative}
+.burger{width:42px;height:42px;border-radius:12px;border:1px solid var(--line);background:none;color:var(--text);font-size:21px;line-height:1;cursor:pointer}
+.burger[aria-expanded=true]{border-color:var(--accent)}
+.menu{position:absolute;right:0;top:48px;min-width:230px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px;box-shadow:0 14px 34px rgba(0,0,0,.5);z-index:30;display:flex;flex-direction:column;gap:2px}
+.mi{display:flex;align-items:center;gap:12px;width:100%;background:none;border:0;color:var(--text);text-align:left;padding:12px;border-radius:10px;font:inherit;font-size:15px;cursor:pointer;text-decoration:none;white-space:nowrap}
+.mi:hover{background:rgba(255,255,255,.07)}
+.mi .ic{width:22px;text-align:center}
+.mi.on{background:var(--accent);color:var(--on-accent,#fff)}
+.menu hr{border:0;border-top:1px solid var(--line);margin:4px 6px}
 </style>
 </head>
 <body>
 <div class="app">
   <header>
-    <a class="logo" href="./">Song<span>Line</span></a><span class="pill">ONLINE</span><span class="muted" style="font-size:11px" title="All phones should show the same version">v10</span>
+    <a class="logo" href="./">Song<span>Line</span></a><span class="pill">ONLINE</span><span class="muted" style="font-size:11px" title="All phones should show the same version">v13</span>
     <nav>
-      <button class="icon-btn hidden" id="histBtn" title="History">📜</button>
-      <button class="icon-btn hidden" id="leaveBtn" title="Leave room">Leave</button>
+      <button class="burger" id="menuBtn" aria-label="Menu" aria-expanded="false">☰</button>
+      <div class="menu hidden" id="menu">
+        <button class="mi hidden" id="histBtn"><span class="ic">📜</span>History</button>
+        <button class="mi" id="themeBtn"><span class="ic">🎨</span>Colors</button>
+        <a class="mi" href="./"><span class="ic">🏠</span>Main page</a>
+        <hr class="hidden" id="leaveSep">
+        <button class="mi hidden" id="leaveBtn"><span class="ic">🚪</span>Leave room</button>
+      </div>
     </nav>
   </header>
   <div id="msg"></div>
@@ -195,6 +233,7 @@ code{background:#120f1c;padding:2px 6px;border-radius:6px;font-size:13px;word-br
             <input type="file" id="csvFile" accept=".csv,text/csv" class="hidden">
           </div>
           <p class="muted" id="deckState" style="margin-bottom:0"></p>
+          <button class="btn ghost sm hidden" id="viewDeck" style="margin-top:8px">👀 View songs</button>
         </div>
       </div>
       <button class="btn big" id="startBtn" style="margin-top:12px">Start game</button>
@@ -211,8 +250,9 @@ code{background:#120f1c;padding:2px 6px;border-radius:6px;font-size:13px;word-br
     <div class="sub" id="sub"></div>
 
     <!-- host controls -->
-    <div class="panel host hidden" id="hostPanel">
-      <h2>Host controls <span class="tag">HOST</span></h2>
+    <div class="quick hidden" id="hostQuick"><button class="btn" id="quickBtn"></button></div>
+    <details class="panel host hidden hostbox" id="hostPanel">
+      <summary>👑 Host controls <span class="muted" style="font-weight:400;font-size:13px" id="hostSum"></span><span class="chev">▾</span></summary>
       <div class="row" style="margin-bottom:10px">
         <select class="inp" id="device" style="flex:1"></select>
         <button class="btn secondary sm" id="devRefresh" title="Refresh Spotify devices">↻</button>
@@ -222,6 +262,7 @@ code{background:#120f1c;padding:2px 6px;border-radius:6px;font-size:13px;word-br
         <button class="btn big hidden" id="drawBtn">🎲 Play a random song</button>
         <button class="btn big" id="scanBtn">📷 Scan a card</button>
         <p class="muted hidden" id="deckLeft" style="text-align:center;margin:8px 0 0"></p>
+        <div class="row hidden" id="viewDeckRow" style="justify-content:center;margin-top:6px"><button class="linkbtn" id="viewDeck2">👀 View song list</button></div>
       </div>
       <div id="hostScan" class="hidden">
         <div class="video-wrap"><video id="video" playsinline muted></video><div class="frame"></div></div>
@@ -253,7 +294,7 @@ code{background:#120f1c;padding:2px 6px;border-radius:6px;font-size:13px;word-br
         <span class="muted">Tap a player's name to edit their tokens.</span>
         <button class="btn ghost sm" id="endBtn">End game</button>
       </div>
-    </div>
+    </details>
 
     <!-- result (everyone) -->
     <div id="resultBox"></div>
@@ -298,6 +339,37 @@ code{background:#120f1c;padding:2px 6px;border-radius:6px;font-size:13px;word-br
   </div>
 </div>
 
+<div class="modal hidden" id="deckModal">
+  <div class="modal-box" style="max-width:560px">
+    <h2 style="margin:0 0 4px">Song list <span class="muted" style="font-size:12px">(only you see this)</span></h2>
+    <p class="muted" style="margin:0 0 10px" id="dkSub"></p>
+    <div class="row" style="margin-bottom:8px">
+      <input class="inp" id="dkSearch" placeholder="Search title or artist" dir="auto" style="flex:1;min-width:150px">
+      <select class="inp" id="dkSort" style="width:auto"><option value="artist">Artist A–Z</option><option value="title">Title A–Z</option><option value="year">Year</option></select>
+    </div>
+    <div class="row" style="margin-bottom:8px;justify-content:space-between">
+      <label class="muted row"><input type="checkbox" id="dkDupOnly"> Only possible duplicates</label>
+      <button class="btn secondary sm hidden" id="dkRemoveDups">Remove duplicates (keep earliest)</button>
+    </div>
+    <ol class="hist" id="dkList" style="max-height:52vh;overflow:auto"></ol>
+    <button class="btn" style="margin-top:12px" data-close>Close</button>
+  </div>
+</div>
+
+<div class="modal hidden" id="themeModal">
+  <div class="modal-box">
+    <h2 style="margin:0 0 4px">🎨 Colors</h2>
+    <p class="muted" style="margin:0">Only changes this phone. Your main color also marks your name on everyone's scoreboard.</p>
+    <div class="swatches" id="swatches"></div>
+    <div class="colrow"><span>Main color</span><input type="color" id="cAccent"></div>
+    <div class="colrow"><span>Second color</span><input type="color" id="cAccent2"></div>
+    <div class="row" style="margin-top:12px;justify-content:space-between">
+      <button class="btn ghost sm" id="themeReset">Reset</button>
+      <button class="btn" data-close>Done</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal hidden" id="pModal">
   <div class="modal-box" style="text-align:center">
     <h2 style="margin:0 0 6px" id="pmName"></h2>
@@ -334,6 +406,58 @@ function msg(text, kind = 'err'){ $('#msg').innerHTML = text ? `<div class="msg 
 function show(id){ $$('section[id^="s-"]').forEach(s => s.classList.toggle('hidden', s.id !== id)); }
 $$('[data-close]').forEach(b => b.onclick = () => b.closest('.modal').classList.add('hidden'));
 $$('.modal').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.add('hidden'); }));
+
+
+// ---------- hamburger menu ----------
+(() => {
+  const btn = document.querySelector('#menuBtn'), menu = document.querySelector('#menu');
+  const set = open => { menu.classList.toggle('hidden', !open); btn.setAttribute('aria-expanded', open); };
+  btn.addEventListener('click', e => { e.stopPropagation(); set(menu.classList.contains('hidden')); });
+  menu.addEventListener('click', e => { if (e.target.closest('.mi')) set(false); });
+  document.addEventListener('click', e => { if (!menu.contains(e.target)) set(false); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') set(false); });
+})();
+
+// ================= colors / themes (per phone) =================
+const THEMES = {
+  neon:   {name: 'Neon',   accent: '#ff3d8b', accent2: '#22d3ee', accent3: '#7c3aed', bg: '#14111f', panel: '#1f1b2e', line: '#332d4a'},
+  ocean:  {name: 'Ocean',  accent: '#3b82f6', accent2: '#2dd4bf', accent3: '#1d4ed8', bg: '#0b1420', panel: '#13212f', line: '#233648'},
+  forest: {name: 'Forest', accent: '#22c55e', accent2: '#facc15', accent3: '#15803d', bg: '#0f1712', panel: '#17231b', line: '#2a3b2f'},
+  sunset: {name: 'Sunset', accent: '#f97316', accent2: '#fbbf24', accent3: '#e11d48', bg: '#1a1210', panel: '#261a16', line: '#3d2b24'},
+  grape:  {name: 'Grape',  accent: '#a855f7', accent2: '#f472b6', accent3: '#6d28d9', bg: '#150f1f', panel: '#211830', line: '#372a4d'},
+  mono:   {name: 'Mono',   accent: '#e5e7eb', accent2: '#9ca3af', accent3: '#4b5563', bg: '#111111', panel: '#1b1b1b', line: '#333333'}
+};
+const hex2rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const mix = (a, b, t) => '#' + hex2rgb(a).map((v, i) => Math.round(v + (hex2rgb(b)[i] - v) * t).toString(16).padStart(2, '0')).join('');
+const lumOf = h => { const c = hex2rgb(h).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; };
+function themeNow(){ const t = store.json('ui_theme', {}); return {...THEMES[t.preset] || THEMES.neon, ...(t.accent ? {accent: t.accent} : {}), ...(t.accent2 ? {accent2: t.accent2} : {}), preset: t.preset || 'neon'}; }
+function applyTheme(){
+  const t = themeNow(), r = document.documentElement.style;
+  r.setProperty('--accent', t.accent); r.setProperty('--accent2', t.accent2); r.setProperty('--accent3', t.accent3);
+  r.setProperty('--bg', t.bg); r.setProperty('--panel', t.panel); r.setProperty('--line', t.line);
+  r.setProperty('--btn2', mix(t.panel, t.line, .55)); r.setProperty('--field', mix(t.bg, '#000000', .25));
+  r.setProperty('--card', mix(t.panel, t.line, .45)); r.setProperty('--hi', mix(t.panel, t.accent, .22));
+  r.setProperty('--on-accent', lumOf(t.accent) > .45 ? '#111111' : '#ffffff');
+  document.querySelector('meta[name=theme-color]')?.setAttribute('content', t.bg);
+  return t;
+}
+function renderThemePicker(){
+  const t = themeNow();
+  $('#swatches').innerHTML = Object.entries(THEMES).map(([k, v]) => `<button class="sw ${t.preset === k ? 'on' : ''}" data-theme="${k}"><i style="background:${v.accent}"></i><i style="background:${v.accent2}"></i><br>${v.name}</button>`).join('');
+  $('#cAccent').value = t.accent; $('#cAccent2').value = t.accent2;
+}
+function setTheme(patch){
+  const cur = store.json('ui_theme', {});
+  store.set('ui_theme', JSON.stringify({...cur, ...patch}));
+  const t = applyTheme(); renderThemePicker();
+  if (code && me && room?.players?.[me]) fb.set(R(`players/${me}/color`), t.accent).catch(() => {});
+}
+$('#themeBtn').onclick = () => { renderThemePicker(); $('#themeModal').classList.remove('hidden'); };
+$('#swatches').onclick = e => { const b = e.target.closest('[data-theme]'); if (b) setTheme({preset: b.dataset.theme, accent: null, accent2: null}); };
+$('#cAccent').oninput = e => setTheme({accent: e.target.value});
+$('#cAccent2').oninput = e => setTheme({accent2: e.target.value});
+$('#themeReset').onclick = () => { store.del('ui_theme'); applyTheme(); renderThemePicker(); setTheme({}); };
+applyTheme();
 
 // ================= Firebase config =================
 const b64e = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -512,7 +636,7 @@ $('#createBtn').onclick = async () => {
       try { await fb.set(R('host'), me); ok = true; } catch(e){ if (i === 5) throw e; }
     }
     const now = Date.now();
-    await fb.update(R(), {created: now, state: 'lobby', settings: {target: 10, tokens: 2, shuffle: true, welcome: store.get('party_welcome') || null}, [`players/${me}`]: {name: myName(), joined: now, online: true}});
+    await fb.update(R(), {created: now, state: 'lobby', settings: {target: 10, tokens: 2, shuffle: true, welcome: store.get('party_welcome') || null}, [`players/${me}`]: {name: myName(), joined: now, online: true, color: themeNow().accent}});
     enterRoom(code);
   } catch(e){ msg('Couldn\'t create the room: ' + esc(e.message) + '. Check the database rules and that Anonymous sign-in is enabled (README).'); }
   $('#createBtn').disabled = false;
@@ -525,7 +649,7 @@ async function join(c){
   try {
     if (!(await fb.get(R('host'))).exists()){ msg(`No room called ${esc(c)}. Check the code with the host.`); code = null; return; }
     const mine = (await fb.get(R(`players/${me}`))).val();
-    await fb.update(R(`players/${me}`), mine ? {name: myName(), online: true} : {name: myName(), joined: Date.now(), online: true});
+    await fb.update(R(`players/${me}`), mine ? {name: myName(), online: true, color: themeNow().accent} : {name: myName(), joined: Date.now(), online: true, color: themeNow().accent});
     enterRoom(c);
   } catch(e){ msg('Couldn\'t join: ' + esc(e.message)); code = null; }
 }
@@ -547,12 +671,12 @@ function enterRoom(c){
     if (room.players?.[me] && room.players[me].online === false) fb.set(R(`players/${me}/online`), true).catch(() => {});
     render();
   }, err => msg('Connection error: ' + esc(err.message)));
-  $('#histBtn').classList.remove('hidden'); $('#leaveBtn').classList.remove('hidden');
+  $('#histBtn').classList.remove('hidden'); $('#leaveBtn').classList.remove('hidden'); $('#leaveSep').classList.remove('hidden');
 }
 function leave(){
   if (unsub){ unsub(); unsub = null; }
   stopScan(); room = null; code = null; store.del('party_room');
-  $('#histBtn').classList.add('hidden'); $('#leaveBtn').classList.add('hidden');
+  $('#histBtn').classList.add('hidden'); $('#leaveBtn').classList.add('hidden'); $('#leaveSep').classList.add('hidden');
   history.replaceState(null, '', location.pathname); show('s-home');
 }
 $('#leaveBtn').onclick = async () => {
@@ -661,7 +785,7 @@ function renderGame(){
   // scoreboard
   $('#score').innerHTML = o.map(u => {
     const p = players()[u];
-    return `<button class="chip ${u === act ? 'turn' : ''} ${u === me ? 'me' : ''}" data-p="${u}"><b><span class="dot ${p.online === false ? 'off' : ''}"></span>${esc(p.name)}${u === room.host ? ' 👑' : ''}</b><span>🃏 ${timeline(u).length}/${target} · 🪙 ${tok(u)}</span></button>`;
+    return `<button class="chip ${u === act ? 'turn' : ''} ${u === me ? 'me' : ''}" data-p="${u}" style="--pc:${/^#[0-9a-f]{6}$/i.test(p.color || '') ? p.color : 'transparent'}"><b><span class="dot ${p.online === false ? 'off' : ''}"></span>${esc(p.name)}${u === room.host ? ' 👑' : ''}</b><span>🃏 ${timeline(u).length}/${target} · 🪙 ${tok(u)}</span></button>`;
   }).join('');
   // winner
   $('#winner').classList.toggle('hidden', !w);
@@ -696,6 +820,7 @@ function renderGame(){
   renderTokens(round, pl, ch, myTurn, w);
   // host panel
   $('#hostPanel').classList.toggle('hidden', !host);
+  renderQuick(host, round, w);
   if (host){
     const st = forcedStage === 'scan' ? 'scan' : round.state;
     const dealing = startDealsPending();
@@ -711,6 +836,7 @@ function renderGame(){
     $('#scanBtn').textContent = dm ? '📷 Scan a printed card instead' : '📷 Scan a card';
     $('#deckLeft').classList.toggle('hidden', !dm);
     if (dm) $('#deckLeft').textContent = `${deckLeft().length} of ${deck.length} songs left`;
+    $('#viewDeckRow').classList.toggle('hidden', !dm);
     $('#hostChallenge').classList.toggle('hidden', st !== 'challenge');
     const wt = undecided(), pa = Object.keys(room.passes || {});
     $('#chList').textContent = (nCh ? '🕵 Steals: ' + Object.entries(ch).map(([u, c]) => `${pname(u)} (${slotLabel(timeline(act), c.slot)})`).join(', ') + '. ' : '') + (pa.length ? `👍 Passed: ${pa.map(pname).join(', ')}. ` : '') + (wt.length ? `Waiting for ${wt.map(pname).join(', ')}. It reveals by itself once everyone has decided, or tap Reveal.` : 'Everyone has decided. Revealing…');
@@ -823,6 +949,31 @@ $('#tl').onclick = e => {
 };
 $('#lockBtn').onclick = () => fb.set(R('placement/locked'), true);
 
+// ---------- host: collapsible controls + one big "what's next" button ----------
+const hp = $('#hostPanel');
+hp.open = store.get('host_open') === '1';
+hp.addEventListener('toggle', () => store.set('host_open', hp.open ? '1' : '0'));
+let quickAct = null;
+function renderQuick(host, round, w){
+  let label = '', act = null, sum = '';
+  const st = forcedStage === 'scan' ? 'scan' : round.state;
+  if (host && !w){
+    if (startDealsPending() && !deckMode()){ sum = '· deal starting cards'; }
+    else if (st === 'idle' && !startDealsPending()){ label = deckMode() ? '🎲 Play a random song' : '📷 Scan a card'; act = () => deckMode() ? draw() : startScan(); sum = '· ready for the next song'; }
+    else if (st === 'challenge'){ label = 'Reveal ▶'; act = () => evaluate(); sum = '· steal window open'; }
+    else if (st === 'revealed'){ label = 'Next turn ▶'; act = () => $('#nextBtn').click(); sum = '· round finished'; }
+    else if (st === 'playing'){ sum = '· song playing'; }
+  }
+  if (w) sum = '· game over';
+  quickAct = act;
+  $('#hostSum').textContent = sum;
+  // the quick button only shows while the full controls are folded away
+  $('#hostQuick').classList.toggle('hidden', !host || !act || hp.open || st === 'scan');
+  $('#quickBtn').textContent = label;
+}
+$('#quickBtn').onclick = () => quickAct && quickAct();
+hp.addEventListener('toggle', () => { if (room) render(); });
+
 // ================= host game logic =================
 async function onScanned(id){
   forcedStage = null;
@@ -866,14 +1017,51 @@ function setDeck(list, label){
   const seen = new Set(); deck = [];
   for (const t of list) if (t.id && /^\d{4}$/.test(String(t.y)) && !seen.has(t.id)){ seen.add(t.id); deck.push(t); }
   store.set('party_deck', JSON.stringify(deck));
-  $('#deckState').textContent = deck.length ? `✓ ${deck.length} songs ready${label ? ' from ' + label : ''}. Years come from Spotify, plus any you corrected on the main page.` : 'No songs found.';
+  $('#viewDeck').classList.toggle('hidden', !deck.length);
+  const nd = dupGroups().reduce((a, g) => a + g.length - 1, 0);
+  $('#deckState').textContent = deck.length ? `✓ ${deck.length} songs ready${label ? ' from ' + label : ''}. Years come from Spotify, plus any you corrected on the main page.${nd ? ` ⚠ ${nd} possible duplicate${nd > 1 ? 's' : ''}. Tap 👀 View songs to check.` : ''}` : 'No songs found.';
 }
+// ---------- host-only song list viewer ----------
+const norm = s => String(s || '').toLowerCase().normalize('NFKD').replace(/[̀-֑ͯ-ׇ]/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+const cleanTitle = s => String(s || '').replace(/\s+-\s+.*$/, '').replace(/\s*[\(\[][^\)\]]*(remaster|version|edit|mix|mono|stereo|live|feat|deluxe|anniversary)[^\)\]]*[\)\]]/ig, '').trim();
+const dupKey = t => norm(cleanTitle(t.n) || t.n) + '|' + norm(String(t.a || '').split(',')[0]);
+function dupGroups(){
+  const m = new Map();
+  deck.forEach(t => { const k = dupKey(t); m.set(k, (m.get(k) || []).concat(t)); });
+  return [...m.values()].filter(g => g.length > 1);
+}
+function renderDeckView(){
+  const over = store.json('year_overrides', {}), yr = t => over[t.id] || t.y;
+  const dupIds = new Set(dupGroups().flat().map(t => t.id)), extra = dupGroups().reduce((a, g) => a + g.length - 1, 0);
+  const q = norm($('#dkSearch').value), only = $('#dkDupOnly').checked, sort = $('#dkSort').value;
+  let list = deck.filter(t => (!only || dupIds.has(t.id)) && (!q || norm(t.n + ' ' + t.a).includes(q)));
+  const cmp = {artist: (a, b) => norm(a.a).localeCompare(norm(b.a)) || norm(a.n).localeCompare(norm(b.n)),
+               title: (a, b) => norm(a.n).localeCompare(norm(b.n)),
+               year: (a, b) => (+yr(a) - +yr(b)) || norm(a.n).localeCompare(norm(b.n))}[sort];
+  // keep duplicates next to each other when showing only duplicates
+  list.sort(only ? (a, b) => dupKey(a).localeCompare(dupKey(b)) || (+yr(a) - +yr(b)) : cmp);
+  $('#dkSub').textContent = `${deck.length} songs · ${extra ? extra + ' possible duplicate' + (extra > 1 ? 's' : '') : 'no duplicates found'}` + (used.size ? ` · ${deck.filter(t => used.has(t.id)).length} played` : '');
+  $('#dkRemoveDups').classList.toggle('hidden', !extra);
+  $('#dkList').innerHTML = list.map(t => `<li class="${dupIds.has(t.id) ? 'isdup' : ''}"><span class="y">${esc(yr(t))}</span><span dir="auto"><b>${esc(t.n)}</b>${dupIds.has(t.id) ? '<span class="dk-tag dk-dup">duplicate?</span>' : ''}${used.has(t.id) ? '<span class="dk-tag dk-played">played</span>' : ''}<br><span class="muted">${esc(t.a)}</span></span><button class="dk-x" data-dkrm="${esc(t.id)}" title="Remove from the list">×</button></li>`).join('') || '<li class="muted">No songs match.</li>';
+}
+function saveDeck(){ store.set('party_deck', JSON.stringify(deck)); renderDeckView(); render(); if (deck.length) $('#deckState').textContent = `✓ ${deck.length} songs ready.`; }
+function openDeckView(){ if (!deck.length) return; $('#deckModal').classList.remove('hidden'); renderDeckView(); }
+$('#viewDeck').onclick = openDeckView; $('#viewDeck2').onclick = openDeckView;
+['dkSearch', 'dkSort', 'dkDupOnly'].forEach(id => $('#' + id).addEventListener('input', renderDeckView));
+$('#dkDupOnly').addEventListener('change', renderDeckView);
+$('#dkList').onclick = e => { const id = e.target.dataset.dkrm; if (id){ deck = deck.filter(t => t.id !== id); saveDeck(); } };
+$('#dkRemoveDups').onclick = () => {
+  const over = store.json('year_overrides', {}), yr = t => over[t.id] || t.y, drop = new Set();
+  dupGroups().forEach(g => { const keep = g.slice().sort((a, b) => (+yr(a) || 9999) - (+yr(b) || 9999))[0]; g.forEach(t => { if (t !== keep) drop.add(t.id); }); });
+  deck = deck.filter(t => !drop.has(t.id)); saveDeck();
+};
 function srcUI(){
   const src = store.get('party_src') || 'cards';
   $$('input[name="src"]').forEach(r => r.checked = r.value === src);
   $('#deckBox').classList.toggle('hidden', src !== 'deck');
   if (src === 'deck' && !plLoaded) loadPlaylists();
   if (src === 'deck' && deck.length && !$('#deckState').textContent) $('#deckState').textContent = `✓ ${deck.length} songs ready (from last time).`;
+  $('#viewDeck').classList.toggle('hidden', !deck.length);
 }
 $$('input[name="src"]').forEach(r => r.onchange = () => { store.set('party_src', r.value); srcUI(); });
 async function loadPlaylists(){

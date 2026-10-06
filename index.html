@@ -17,14 +17,11 @@ button,select,input{font:inherit}
 header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
 .logo{font-weight:800;font-size:22px;letter-spacing:-.5px}
 .logo span{color:var(--accent)}
-nav{margin-left:auto;display:flex;gap:6px}
-.tab{white-space:nowrap;background:none;border:1px solid var(--line);color:var(--muted);padding:6px 12px;border-radius:999px;cursor:pointer}
-.tab.on{background:var(--accent);border-color:var(--accent);color:#fff}
 .icon-btn{background:none;border:1px solid var(--line);color:var(--muted);width:36px;height:36px;border-radius:50%;cursor:pointer}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:16px}
 .panel h2{margin:0 0 8px;font-size:18px}
 .muted{color:var(--muted);font-size:14px}
-.btn{background:var(--accent);color:#fff;border:0;border-radius:12px;padding:12px 18px;font-weight:700;cursor:pointer}
+.btn{background:var(--accent);color:var(--on-accent,#fff);border:0;border-radius:12px;padding:12px 18px;font-weight:700;cursor:pointer}
 .btn.secondary{background:#2c2742;color:var(--text)}
 .btn.ghost{background:none;border:1px solid var(--line);color:var(--text)}
 .btn:disabled{opacity:.5;cursor:default}
@@ -135,18 +132,34 @@ tr.isdup td{background:rgba(251,191,36,.06)}
 .card.back .yr{font:900 calc(34pt*var(--k))/1 system-ui,sans-serif}
 .card.back .t{font:italic 500 calc(10pt*var(--k))/1.15 system-ui,sans-serif}
 .card.empty{border-color:transparent;background:none}
+
+/* hamburger menu */
+nav{margin-left:auto;position:relative}
+.burger{width:42px;height:42px;border-radius:12px;border:1px solid var(--line);background:none;color:var(--text);font-size:21px;line-height:1;cursor:pointer}
+.burger[aria-expanded=true]{border-color:var(--accent)}
+.menu{position:absolute;right:0;top:48px;min-width:230px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px;box-shadow:0 14px 34px rgba(0,0,0,.5);z-index:30;display:flex;flex-direction:column;gap:2px}
+.mi{display:flex;align-items:center;gap:12px;width:100%;background:none;border:0;color:var(--text);text-align:left;padding:12px;border-radius:10px;font:inherit;font-size:15px;cursor:pointer;text-decoration:none;white-space:nowrap}
+.mi:hover{background:rgba(255,255,255,.07)}
+.mi .ic{width:22px;text-align:center}
+.mi.on{background:var(--accent);color:var(--on-accent,#fff)}
+.menu hr{border:0;border-top:1px solid var(--line);margin:4px 6px}
 </style>
 </head>
 <body>
 <div class="app">
   <header>
     <div class="logo">Song<span>Line</span></div>
+    <span class="muted" id="viewName"></span>
     <nav>
-      <button class="tab on" data-view="play">Play</button>
-      <button class="tab" data-view="make">Make cards</button>
-      <a class="icon-btn" href="party.html" title="Online party mode" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none">🌐</a>
-      <button class="icon-btn" id="phoneQrBtn" title="Open on your phone">📱</button>
-      <button class="icon-btn" data-view="settings" title="Settings">⚙</button>
+      <button class="burger" id="menuBtn" aria-label="Menu" aria-expanded="false">☰</button>
+      <div class="menu hidden" id="menu">
+        <button class="mi tab on" data-view="play"><span class="ic">🎵</span>Play</button>
+        <button class="mi tab" data-view="make"><span class="ic">🃏</span>Make cards</button>
+        <a class="mi" href="party.html"><span class="ic">🌐</span>Online party mode</a>
+        <hr>
+        <button class="mi" id="phoneQrBtn"><span class="ic">📱</span>Open on your phone</button>
+        <button class="mi tab" data-view="settings"><span class="ic">⚙</span>Settings</button>
+      </div>
     </nav>
   </header>
 
@@ -458,11 +471,36 @@ function showMsg(text, kind='err', el=$('#globalMsg')){
 }
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+// ---------- colors chosen on the online page (🎨) apply here too ----------
+(() => {
+  const T = {neon: ['#ff3d8b', '#22d3ee', '#14111f', '#1f1b2e', '#332d4a'], ocean: ['#3b82f6', '#2dd4bf', '#0b1420', '#13212f', '#233648'],
+    forest: ['#22c55e', '#facc15', '#0f1712', '#17231b', '#2a3b2f'], sunset: ['#f97316', '#fbbf24', '#1a1210', '#261a16', '#3d2b24'],
+    grape: ['#a855f7', '#f472b6', '#150f1f', '#211830', '#372a4d'], mono: ['#e5e7eb', '#9ca3af', '#111111', '#1b1b1b', '#333333']};
+  const t = store.json('ui_theme', {}), base = T[t.preset] || T.neon;
+  const [accent, accent2, bg, panel, line] = [t.accent || base[0], t.accent2 || base[1], base[2], base[3], base[4]];
+  const r = document.documentElement.style;
+  Object.entries({'--accent': accent, '--accent2': accent2, '--bg': bg, '--panel': panel, '--line': line}).forEach(([k, v]) => r.setProperty(k, v));
+  const lum = h => { const c = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255).map(v => v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; };
+  r.setProperty('--on-accent', lum(accent) > .45 ? '#111111' : '#ffffff');
+})();
+
+
+// ---------- hamburger menu ----------
+(() => {
+  const btn = document.querySelector('#menuBtn'), menu = document.querySelector('#menu');
+  const set = open => { menu.classList.toggle('hidden', !open); btn.setAttribute('aria-expanded', open); };
+  btn.addEventListener('click', e => { e.stopPropagation(); set(menu.classList.contains('hidden')); });
+  menu.addEventListener('click', e => { if (e.target.closest('.mi')) set(false); });
+  document.addEventListener('click', e => { if (!menu.contains(e.target)) set(false); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') set(false); });
+})();
+
 // ---------- views ----------
 function setView(v){
   $$('section[id^="view-"]').forEach(s => s.classList.toggle('hidden', s.id !== 'view-'+v));
   $$('.tab').forEach(t => t.classList.toggle('on', t.dataset.view === v));
   store.set('view', v);
+  $('#viewName').textContent = {play: '· Play', make: '· Make cards', settings: '· Settings'}[v] || '';
   if (v === 'make' && token()) loadPlaylists();
   if (v !== 'play') stopScan();
 }
@@ -1025,7 +1063,7 @@ $('#tbody').addEventListener('click', e => {
 $('#mbApply').onclick = () => { tracks.forEach(t => { if (suggestions[t.id]) setYear(t, suggestions[t.id]); }); renderTable(); };
 
 // MusicBrainz: earliest first-release year for a matching recording
-const norm = s => s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+const norm = s => String(s || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f\u0591-\u05c7]/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 function cleanTitle(s){
   return s.replace(/\s+-\s+.*$/, '')
           .replace(/\s*[\(\[][^\)\]]*(remaster|version|edit|mix|mono|stereo|live|feat|deluxe|anniversary)[^\)\]]*[\)\]]/ig, '')
