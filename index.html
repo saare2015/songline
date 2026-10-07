@@ -318,7 +318,7 @@ body.light tr.isdup td{background:rgba(251,191,36,.12)}
 
       <div class="panel hidden" id="tracksPanel">
         <h2>2. Check the years</h2>
-        <p class="muted">Spotify often gives the year of a remaster or compilation instead of the original release. Edit any year directly, or let MusicBrainz suggest original years (about 1 song per second, or much faster with Quick on). Your edits are remembered in this browser.</p>
+        <p class="muted">Spotify often gives the year of a remaster or compilation instead of the original release. Edit any year directly, or let MusicBrainz and Wikipedia (Hebrew Wikipedia for Hebrew songs) suggest original years (about 1 song per second, or much faster with Quick on). Your edits are remembered in this browser.</p>
         <div class="row" style="margin-bottom:10px">
           <button class="btn secondary" id="mbBtn">Suggest original years</button>
           <button class="btn ghost hidden" id="mbApply">Apply all suggestions</button>
@@ -1058,7 +1058,7 @@ function renderTable(){
   const dupIds = new Set(dupGroups().flat().map(t => t.id));
   $('#tbody').innerHTML = tracks.map((t, i) => {
     const s = suggestions[t.id];
-    const sug = s && s !== yearOf(t) ? `<div class="sug" data-apply="${i}">use ${esc(s)}</div>` : '';
+    const sug = s && s !== yearOf(t) ? `<div class="sug" data-apply="${i}" title="First release found on ${esc(origSrc()[t.id] || 'MusicBrainz')}">use ${esc(s)}</div>` : '';
     const tags = (dupIds.has(t.id) ? '<span class="tag dup">duplicate?</span>' : '') + (pr.has(t.id) ? '<span class="tag pr">printed</span>' : '');
     return `<tr class="${dupIds.has(t.id) ? 'isdup' : ''}"><td><input class="year ${over[t.id] ? 'changed' : ''}" data-i="${i}" value="${esc(yearOf(t))}" inputmode="numeric" maxlength="4">${sug}</td><td>${esc(t.title)}${tags}</td><td class="muted">${esc(t.artist)}</td><td><button class="x" data-rm="${i}" title="Remove">×</button></td></tr>`;
   }).join('');
@@ -1156,7 +1156,76 @@ async function mbFetch(q){
 }
 // quick check: only songs whose title or album looks like a remaster / re-release / compilation
 const mbSuspect = (title, album) => /remaster|re-?master|version|edition|deluxe|anniversary|expanded|best of|greatest|hits|collection|essential|anthology|the very|definitive|ultimate|gold|platinum|complete|years|live|compilation|soundtrack|o\.?s\.?t|mono|stereo|mix|edit|\b(19|20)\d\d\b|המיטב|אוסף|להיטים|הגדולים|רימאסטר|מחודש|גרסה|גרסת|הופעה|חי ב/i.test(title + ' | ' + (album || ''));
-const mbCache = () => { try { return JSON.parse(localStorage.getItem('mb_years') || '{}'); } catch(e){ return {}; } };
+// ---- original-year results, shared by the main page and the online song list ----
+// orig_years: {trackId: "1985" | ""}  ("" = checked, nothing earlier found) · orig_src: {trackId: "MusicBrainz" | "Wikipedia" | "Wikidata"}
+function origStore(){
+  let c; try { c = JSON.parse(localStorage.getItem('orig_years') || 'null'); } catch(e){}
+  if (!c){   // first run: keep years found by the older MusicBrainz-only check, re-check the misses with Wikipedia too
+    c = {}; let old = {}; try { old = JSON.parse(localStorage.getItem('mb_years') || '{}'); } catch(e){}
+    const src = {}; for (const k in old) if (old[k]){ c[k] = old[k]; src[k] = 'MusicBrainz'; }
+    try { localStorage.setItem('orig_years', JSON.stringify(c)); localStorage.setItem('orig_src', JSON.stringify(src)); } catch(e){}
+  }
+  return c;
+}
+const origSrc = () => { try { return JSON.parse(localStorage.getItem('orig_src') || '{}'); } catch(e){ return {}; } };
+function origSave(id, r){
+  const c = origStore(), s = origSrc(); c[id] = r?.y || ''; if (r?.y) s[id] = r.s; else delete s[id];
+  try { localStorage.setItem('orig_years', JSON.stringify(c)); localStorage.setItem('orig_src', JSON.stringify(s)); } catch(e){}
+}
+// ---- Wikipedia / Wikidata (Hebrew Wikipedia for Hebrew songs, English otherwise) ----
+const HEB = /[֐-׿]/;
+const yearsIn = s => (String(s || '').match(/\b(19\d\d|20[0-4]\d)\b/g) || []).map(Number);
+const minYear = ys => ys.length ? String(Math.min(...ys)) : null;
+async function wikiYear(title, artistList){
+  const artists = String(artistList || '').split(',').map(a => a.trim()).filter(Boolean);
+  const lang = HEB.test(title) ? 'he' : 'en';
+  const api = `https://${lang}.wikipedia.org/w/api.php?format=json&formatversion=2&origin=*&`;
+  const want = norm(title), arts = artists.map(norm).filter(a => a.length > 1);
+  if (!want || !arts.length) return null;
+  const bare = x => norm(String(x).replace(/\s*\([^)]*\)\s*$/, ''));     // "שיר (שיר של X)" -> "שיר"
+  const s = await (await fetch(api + 'action=query&list=search&srlimit=10&srsearch=' + encodeURIComponent(title + ' ' + artists[0]))).json();
+  const cands = (s.query?.search || []).map(r => r.title).filter(x => bare(x) === want).slice(0, 5);
+  if (!cands.length) return null;
+  const d = await (await fetch(api + 'action=query&prop=revisions|pageprops&rvprop=content&rvslots=main&ppprop=wikibase_item&titles=' + encodeURIComponent(cands.join('|')))).json();
+  for (const p of d.query?.pages || []){
+    let txt = p.revisions?.[0]?.slots?.main?.content || '';
+    if (/^#(redirect|הפניה)/i.test(txt)) continue;
+    const head = norm(txt.slice(0, 8000));
+    if (!arts.some(a => head.includes(a))) continue;     // must be this artist's song, not a namesake
+    // 1) the infobox: "| יצא לאור = 1985" / "| released = 12 May 1977"
+    const ys = [];
+    for (const line of txt.slice(0, 6000).split('\n')){
+      const m = line.match(/^\s*\|\s*([^=|]{2,40}?)\s*=\s*(.+)$/); if (!m) continue;
+      const key = m[1].toLowerCase();
+      if (/recorded|הוקלט|הקלטה|born|לידה|פטירה|died|length|אורך/.test(key)) continue;
+      if (/released|release|published|date|year|יצא|יציאה|יציאת|הוצאה|הוצא|שוחרר|פורסם|פרסום|תאריך|שנה|שנת/.test(key)) ys.push(...yearsIn(m[2].replace(/<ref[\s\S]*?(<\/ref>|\/>)/g, '')));
+    }
+    if (ys.length) return {y: minYear(ys), s: 'Wikipedia'};
+    // 2) Wikidata "publication date" of the same article
+    const q = p.pageprops?.wikibase_item;
+    if (q){
+      try {
+        const w = await (await fetch(`https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&origin=*&props=claims&ids=${q}`)).json();
+        const y = minYear((w.entities?.[q]?.claims?.P577 || []).map(c => +String(c.mainsnak?.datavalue?.value?.time || '').slice(1, 5)).filter(Boolean));
+        if (y) return {y, s: 'Wikidata'};
+      } catch(e){}
+    }
+    // 3) the article's first sentence ("... is a song by X, released in 1985")
+    const body = txt.replace(/<ref[\s\S]*?(<\/ref>|\/>)/g, '').replace(/\{\{[^{}]*\}\}/g, '').replace(/\{\{[^{}]*\}\}/g, '');
+    const first = (body.split('\n').map(l => l.trim()).find(l => l.length > 40 && !/^[{|}!=*#\[<]/.test(l)) || '').split(/(?<=[^.]{20})\.\s/)[0];
+    const fy = minYear(yearsIn(first));
+    if (fy) return {y: fy, s: 'Wikipedia'};
+  }
+  return null;
+}
+// MusicBrainz first; Wikipedia when MusicBrainz finds nothing, and always for Hebrew songs (MusicBrainz knows few of them). Earliest year wins.
+async function origYear(title, artistList, mb){
+  let a = null, b = null;
+  try { const y = await mb(); if (y) a = {y, s: 'MusicBrainz'}; } catch(e){}
+  if (!a || HEB.test(title + artistList)){ try { b = await wikiYear(title, artistList); } catch(e){} }
+  return a && b ? (+b.y < +a.y ? b : a) : (a || b);
+}
+const mbCache = () => origStore();
 async function mbYear(t){
   // same matching as the online song list: title + artist first, then title only with an artist check
   const title = cleanTitle(t.title) || t.title, artist = String(t.firstArtist || t.artist || '').split(',')[0].trim(), want = norm(title), wantA = norm(artist);
@@ -1189,8 +1258,8 @@ $('#mbBtn').onclick = async () => {
     const t = list[i];
     $('#mbState').textContent = `Checking ${i + 1}/${list.length}…`;
     if (suggestions[t.id] === undefined){
-      try { const y = await mbYear(t); suggestions[t.id] = y; } catch(e){ suggestions[t.id] = null; }
-      const c = mbCache(); c[t.id] = suggestions[t.id] || ''; try { localStorage.setItem('mb_years', JSON.stringify(c)); } catch(e){}
+      const r = await origYear(cleanTitle(t.title) || t.title, t.artist || t.firstArtist || '', () => mbYear(t));
+      suggestions[t.id] = r?.y || null; origSave(t.id, r);
     }
     const s = suggestions[t.id];
     if (s && s < (t.year || '9999') && s !== yearOf(t)) found++;

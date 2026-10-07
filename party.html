@@ -116,6 +116,7 @@ code{background:var(--field);padding:2px 6px;border-radius:6px;font-size:13px;wo
 .dk-tag{font-size:11px;border-radius:6px;padding:1px 6px;margin-left:6px;white-space:nowrap}
 .dk-dup{background:#3a2a0d;color:#ffd98a}.dk-played{background:#0f2e22;color:#86efac}
 .dk-y{width:64px;background:var(--field);border:1px solid var(--line);color:var(--accent2);font-weight:800;border-radius:8px;padding:4px 6px;font:inherit;font-weight:800}
+#dkList .y{flex:0 0 66px}
 .dk-y.edited{border-color:var(--warn);color:var(--warn)}
 .dk-sug{display:block;margin-top:4px;background:none;border:1px dashed var(--warn);color:var(--warn);border-radius:6px;font-size:11px;padding:1px 6px;cursor:pointer;white-space:nowrap}
 .dk-mb{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 0;margin-bottom:8px}
@@ -241,7 +242,7 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
 <body>
 <div class="app">
   <header>
-    <a class="logo" href="./">Song<span>Line</span></a><span class="pill">ONLINE</span><span class="muted" style="font-size:11px" title="All phones should show the same version">v20</span>
+    <a class="logo" href="./">Song<span>Line</span></a><span class="pill">ONLINE</span><span class="muted" style="font-size:11px" title="All phones should show the same version">v22</span>
     <nav>
       <button class="burger" id="menuBtn" aria-label="Menu" aria-expanded="false">☰</button>
       <div class="menu hidden" id="menu">
@@ -484,11 +485,11 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
         <button class="btn sm hidden" id="dkMbApply"></button>
         <span class="muted" id="dkMbState" style="font-size:13px"></span>
       </div>
-      <label class="muted row" style="font-size:13px;margin-top:6px"><input type="checkbox" id="dkMbQuick" checked> Quick: only songs that look like remasters or compilations <span id="dkMbQuickN"></span></label>
-      <p class="muted" style="font-size:12px;margin:6px 0 0">Spotify often shows the year of a remaster or compilation. This checks MusicBrainz (a free music database) for the first release of each song, newest years first. Tap a year to edit it yourself.</p>
+      <label class="muted" style="font-size:13px;margin-top:6px;display:flex;gap:8px;align-items:baseline"><input type="checkbox" id="dkMbQuick" checked style="flex:none"> <span>Quick: only songs that look like remasters or compilations <span id="dkMbQuickN"></span></span></label>
+      <p class="muted" style="font-size:12px;margin:6px 0 0">Spotify often shows the year of a remaster or compilation. This checks MusicBrainz (a free music database) and Wikipedia (Hebrew Wikipedia for Hebrew songs) for the first release of each song, newest years first. Tap a year to edit it yourself.</p>
     </div>
     <div class="row" style="margin-bottom:8px;justify-content:space-between">
-      <label class="muted row"><input type="checkbox" id="dkDupOnly"> Only possible duplicates</label>
+      <div class="row" style="gap:14px"><label class="muted row"><input type="checkbox" id="dkDupOnly"> Only possible duplicates</label><label class="muted row"><input type="checkbox" id="dkSugOnly"> Only year suggestions <span id="dkSugN"></span></label></div>
       <button class="btn secondary sm hidden" id="dkRemoveDups">Remove duplicates (keep earliest)</button>
     </div>
     <ol class="hist" id="dkList" style="max-height:52vh;overflow:auto"></ol>
@@ -1504,7 +1505,8 @@ function renderDeckView(){
   const over = store.json('year_overrides', {}), yr = t => over[t.id] || t.y;
   const dupIds = new Set(dupGroups().flat().map(t => t.id)), extra = dupGroups().reduce((a, g) => a + g.length - 1, 0);
   const q = norm($('#dkSearch').value), only = $('#dkDupOnly').checked, sort = $('#dkSort').value;
-  let list = deck.filter(t => (!only || dupIds.has(t.id)) && (!q || norm(t.n + ' ' + t.a).includes(q)));
+  const sugOnly = $('#dkSugOnly').checked;
+  let list = deck.filter(t => (!only || dupIds.has(t.id)) && (!sugOnly || mbSug(t)) && (!q || norm(t.n + ' ' + t.a).includes(q)));
   const cmp = {artist: (a, b) => norm(a.a).localeCompare(norm(b.a)) || norm(a.n).localeCompare(norm(b.n)),
                title: (a, b) => norm(a.n).localeCompare(norm(b.n)),
                year: (a, b) => (+yr(a) - +yr(b)) || norm(a.n).localeCompare(norm(b.n))}[sort];
@@ -1515,8 +1517,10 @@ function renderDeckView(){
   const sugN = deck.filter(t => mbSug(t)).length;
   $('#dkMbApply').classList.toggle('hidden', !sugN || mbRun);
   { const c = mbCache(), left = deck.filter(t => !(t.id in c)); $('#dkMbQuickN').textContent = `(${left.filter(t => mbSuspect(t.n, t.al)).length} of ${left.length} unchecked)`; }
+  $('#dkSugN').textContent = `(${sugN})`;
   $('#dkMbApply').textContent = `Apply ${sugN} suggestion${sugN === 1 ? '' : 's'}`;
-  $('#dkList').innerHTML = list.map(t => `<li class="${dupIds.has(t.id) ? 'isdup' : ''}"><span class="y"><input class="dk-y ${over[t.id] ? 'edited' : ''}" data-dky="${esc(t.id)}" value="${esc(yr(t))}" inputmode="numeric" maxlength="4" title="Edit the year">${mbSug(t) ? `<button class="dk-sug" data-dksug="${esc(t.id)}" title="First release found on MusicBrainz">use ${esc(mbSug(t))}</button>` : ''}</span><span dir="auto"><b>${esc(t.n)}</b>${dupIds.has(t.id) ? '<span class="dk-tag dk-dup">duplicate?</span>' : ''}${used.has(t.id) ? '<span class="dk-tag dk-played">played</span>' : ''}<br><span class="muted">${esc(t.a)}</span></span><button class="dk-x" data-dkrm="${esc(t.id)}" title="Remove from the list">×</button></li>`).join('') || '<li class="muted">No songs match.</li>';
+  $('#dkList').innerHTML = list.map(t => `<li class="${dupIds.has(t.id) ? 'isdup' : ''}"><span class="y"><input class="dk-y ${over[t.id] ? 'edited' : ''}" data-dky="${esc(t.id)}" value="${esc(yr(t))}" inputmode="numeric" maxlength="4" title="Edit the year">${mbSug(t) ? `<button class="dk-sug" data-dksug="${esc(t.id)}" title="First release found on ${esc(origSrc()[t.id] || 'MusicBrainz')}">use ${esc(mbSug(t))} <span style="display:block;font-size:9px;opacity:.75">${esc(origSrc()[t.id] || 'MusicBrainz')}</span></button>` : ''}</span><span dir="auto"><b>${esc(t.n)}</b>${dupIds.has(t.id) ? '<span class="dk-tag dk-dup">duplicate?</span>' : ''}${used.has(t.id) ? '<span class="dk-tag dk-played">played</span>' : ''}<br><span class="muted">${esc(t.a)}</span></span><button class="dk-x" data-dkrm="${esc(t.id)}" title="Remove from the list">×</button></li>`).join('') || '<li class="muted">No songs match.</li>';
+  if (!list.length && sugOnly) $('#dkList').innerHTML = `<li class="muted" style="padding:12px">${mbRun ? 'No suggestions yet, still checking…' : 'No year suggestions. Tap 🔎 Find original years to look for some.'}</li>`;
 }
 // ---- year editing + MusicBrainz lookups (results are shared with the main page via year_overrides) ----
 function setDeckYear(id, y){
@@ -1526,7 +1530,76 @@ function setDeckYear(id, y){
   if (!/^\d{4}$/.test(y) || y === String(t.y)) delete o[id]; else o[id] = y;
   store.set('year_overrides', JSON.stringify(o));
 }
-const mbCache = () => store.json('mb_years', {});
+// ---- original-year results, shared by the main page and the online song list ----
+// orig_years: {trackId: "1985" | ""}  ("" = checked, nothing earlier found) · orig_src: {trackId: "MusicBrainz" | "Wikipedia" | "Wikidata"}
+function origStore(){
+  let c; try { c = JSON.parse(localStorage.getItem('orig_years') || 'null'); } catch(e){}
+  if (!c){   // first run: keep years found by the older MusicBrainz-only check, re-check the misses with Wikipedia too
+    c = {}; let old = {}; try { old = JSON.parse(localStorage.getItem('mb_years') || '{}'); } catch(e){}
+    const src = {}; for (const k in old) if (old[k]){ c[k] = old[k]; src[k] = 'MusicBrainz'; }
+    try { localStorage.setItem('orig_years', JSON.stringify(c)); localStorage.setItem('orig_src', JSON.stringify(src)); } catch(e){}
+  }
+  return c;
+}
+const origSrc = () => { try { return JSON.parse(localStorage.getItem('orig_src') || '{}'); } catch(e){ return {}; } };
+function origSave(id, r){
+  const c = origStore(), s = origSrc(); c[id] = r?.y || ''; if (r?.y) s[id] = r.s; else delete s[id];
+  try { localStorage.setItem('orig_years', JSON.stringify(c)); localStorage.setItem('orig_src', JSON.stringify(s)); } catch(e){}
+}
+// ---- Wikipedia / Wikidata (Hebrew Wikipedia for Hebrew songs, English otherwise) ----
+const HEB = /[֐-׿]/;
+const yearsIn = s => (String(s || '').match(/\b(19\d\d|20[0-4]\d)\b/g) || []).map(Number);
+const minYear = ys => ys.length ? String(Math.min(...ys)) : null;
+async function wikiYear(title, artistList){
+  const artists = String(artistList || '').split(',').map(a => a.trim()).filter(Boolean);
+  const lang = HEB.test(title) ? 'he' : 'en';
+  const api = `https://${lang}.wikipedia.org/w/api.php?format=json&formatversion=2&origin=*&`;
+  const want = norm(title), arts = artists.map(norm).filter(a => a.length > 1);
+  if (!want || !arts.length) return null;
+  const bare = x => norm(String(x).replace(/\s*\([^)]*\)\s*$/, ''));     // "שיר (שיר של X)" -> "שיר"
+  const s = await (await fetch(api + 'action=query&list=search&srlimit=10&srsearch=' + encodeURIComponent(title + ' ' + artists[0]))).json();
+  const cands = (s.query?.search || []).map(r => r.title).filter(x => bare(x) === want).slice(0, 5);
+  if (!cands.length) return null;
+  const d = await (await fetch(api + 'action=query&prop=revisions|pageprops&rvprop=content&rvslots=main&ppprop=wikibase_item&titles=' + encodeURIComponent(cands.join('|')))).json();
+  for (const p of d.query?.pages || []){
+    let txt = p.revisions?.[0]?.slots?.main?.content || '';
+    if (/^#(redirect|הפניה)/i.test(txt)) continue;
+    const head = norm(txt.slice(0, 8000));
+    if (!arts.some(a => head.includes(a))) continue;     // must be this artist's song, not a namesake
+    // 1) the infobox: "| יצא לאור = 1985" / "| released = 12 May 1977"
+    const ys = [];
+    for (const line of txt.slice(0, 6000).split('\n')){
+      const m = line.match(/^\s*\|\s*([^=|]{2,40}?)\s*=\s*(.+)$/); if (!m) continue;
+      const key = m[1].toLowerCase();
+      if (/recorded|הוקלט|הקלטה|born|לידה|פטירה|died|length|אורך/.test(key)) continue;
+      if (/released|release|published|date|year|יצא|יציאה|יציאת|הוצאה|הוצא|שוחרר|פורסם|פרסום|תאריך|שנה|שנת/.test(key)) ys.push(...yearsIn(m[2].replace(/<ref[\s\S]*?(<\/ref>|\/>)/g, '')));
+    }
+    if (ys.length) return {y: minYear(ys), s: 'Wikipedia'};
+    // 2) Wikidata "publication date" of the same article
+    const q = p.pageprops?.wikibase_item;
+    if (q){
+      try {
+        const w = await (await fetch(`https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&origin=*&props=claims&ids=${q}`)).json();
+        const y = minYear((w.entities?.[q]?.claims?.P577 || []).map(c => +String(c.mainsnak?.datavalue?.value?.time || '').slice(1, 5)).filter(Boolean));
+        if (y) return {y, s: 'Wikidata'};
+      } catch(e){}
+    }
+    // 3) the article's first sentence ("... is a song by X, released in 1985")
+    const body = txt.replace(/<ref[\s\S]*?(<\/ref>|\/>)/g, '').replace(/\{\{[^{}]*\}\}/g, '').replace(/\{\{[^{}]*\}\}/g, '');
+    const first = (body.split('\n').map(l => l.trim()).find(l => l.length > 40 && !/^[{|}!=*#\[<]/.test(l)) || '').split(/(?<=[^.]{20})\.\s/)[0];
+    const fy = minYear(yearsIn(first));
+    if (fy) return {y: fy, s: 'Wikipedia'};
+  }
+  return null;
+}
+// MusicBrainz first; Wikipedia when MusicBrainz finds nothing, and always for Hebrew songs (MusicBrainz knows few of them). Earliest year wins.
+async function origYear(title, artistList, mb){
+  let a = null, b = null;
+  try { const y = await mb(); if (y) a = {y, s: 'MusicBrainz'}; } catch(e){}
+  if (!a || HEB.test(title + artistList)){ try { b = await wikiYear(title, artistList); } catch(e){} }
+  return a && b ? (+b.y < +a.y ? b : a) : (a || b);
+}
+const mbCache = () => origStore();
 function mbSug(t){
   const y = mbCache()[t.id], cur = (store.json('year_overrides', {})[t.id]) || t.y;
   return y && /^\d{4}$/.test(y) && +y < +cur ? y : null;
@@ -1546,7 +1619,7 @@ async function mbFetch(q){
 }
 // quick check: only songs whose title or album looks like a remaster / re-release / compilation
 const mbSuspect = (title, album) => /remaster|re-?master|version|edition|deluxe|anniversary|expanded|best of|greatest|hits|collection|essential|anthology|the very|definitive|ultimate|gold|platinum|complete|years|live|compilation|soundtrack|o\.?s\.?t|mono|stereo|mix|edit|\b(19|20)\d\d\b|המיטב|אוסף|להיטים|הגדולים|רימאסטר|מחודש|גרסה|גרסת|הופעה|חי ב/i.test(title + ' | ' + (album || ''));
-async function mbLookup(t){
+async function mbOnly(t){
   const title = cleanTitle(t.n) || t.n, artist = String(t.a || '').split(',')[0].trim(), want = norm(title), wantA = norm(artist);
   const q1 = `recording:"${title.replace(/"/g, '')}" AND artist:"${artist.replace(/"/g, '')}"`;
   const q2 = `recording:"${title.replace(/"/g, '')}"`;
@@ -1580,8 +1653,8 @@ $('#dkMb').onclick = async () => {
   for (const t of todo){
     if (!mbRun) break;
     $('#dkMbState').textContent = `Checking ${++done}/${todo.length}: ${t.n}`;
-    let y = null; try { y = await mbLookup(t); } catch(e){}
-    const c = mbCache(); c[t.id] = y || ''; store.set('mb_years', JSON.stringify(c));
+    const title = cleanTitle(t.n) || t.n;
+    origSave(t.id, await origYear(title, t.a, () => mbOnly(t)));
     if (done % 5 === 0) renderDeckView();
   }
   mbRun = false; $('#dkMb').textContent = '🔎 Find original years';
@@ -1595,8 +1668,9 @@ $('#dkList').addEventListener('keydown', e => { if (e.target.dataset.dky && e.ke
 function saveDeck(){ store.set('party_deck', JSON.stringify(deck)); renderDeckView(); render(); if (deck.length) $('#deckState').textContent = `✓ ${deck.length} songs ready.`; }
 function openDeckView(){ if (!deck.length) return; $('#deckModal').classList.remove('hidden'); renderDeckView(); }
 $('#viewDeck').onclick = openDeckView; $('#viewDeck2').onclick = openDeckView;
-['dkSearch', 'dkSort', 'dkDupOnly'].forEach(id => $('#' + id).addEventListener('input', renderDeckView));
+['dkSearch', 'dkSort', 'dkDupOnly', 'dkSugOnly'].forEach(id => $('#' + id).addEventListener('input', renderDeckView));
 $('#dkDupOnly').addEventListener('change', renderDeckView);
+$('#dkSugOnly').addEventListener('change', renderDeckView);
 $('#dkMbQuick').checked = store.get('mb_quick') !== '0';
 $('#dkMbQuick').addEventListener('change', e => store.set('mb_quick', e.target.checked ? '1' : '0'));
 $('#dkList').onclick = e => {
