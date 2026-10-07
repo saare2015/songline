@@ -318,12 +318,13 @@ body.light tr.isdup td{background:rgba(251,191,36,.12)}
 
       <div class="panel hidden" id="tracksPanel">
         <h2>2. Check the years</h2>
-        <p class="muted">Spotify often gives the year of a remaster or compilation instead of the original release. Edit any year directly, or let MusicBrainz suggest original years (about 1 song per second). Your edits are remembered in this browser.</p>
+        <p class="muted">Spotify often gives the year of a remaster or compilation instead of the original release. Edit any year directly, or let MusicBrainz suggest original years (about 1 song per second, or much faster with Quick on). Your edits are remembered in this browser.</p>
         <div class="row" style="margin-bottom:10px">
           <button class="btn secondary" id="mbBtn">Suggest original years</button>
           <button class="btn ghost hidden" id="mbApply">Apply all suggestions</button>
           <span class="muted" id="mbState"></span>
         </div>
+        <label class="muted row" style="margin-bottom:10px"><input type="checkbox" id="mbQuick" checked> Quick: only check songs that look like remasters or compilations</label>
         <div class="row" style="margin-bottom:10px">
           <span class="muted" id="listStats"></span>
           <button class="btn ghost hidden" id="dupRemove" style="padding:8px 12px">Remove duplicates</button>
@@ -1028,7 +1029,7 @@ $('#loadTracks').onclick = async () => {
           const t = it.item || it.track;
           if (!t || t.is_local || (t.type && t.type !== 'track') || !t.id || seen.has(t.id)) continue;
           seen.add(t.id);
-          tracks.push({id: t.id, title: t.name, artist: (t.artists || []).map(a => a.name).join(', '), firstArtist: t.artists?.[0]?.name || '', year: (t.album?.release_date || '').slice(0, 4), cover: (t.album?.images || [])[0]?.url || ''});
+          tracks.push({id: t.id, title: t.name, artist: (t.artists || []).map(a => a.name).join(', '), firstArtist: t.artists?.[0]?.name || '', year: (t.album?.release_date || '').slice(0, 4), al: t.album?.name || '', cover: (t.album?.images || [])[0]?.url || ''});
         }
         url = d.next;
         $('#loadState').textContent = `Loading… ${tracks.length} songs`;
@@ -1141,13 +1142,27 @@ function cleanTitle(s){
           .replace(/\s*[\(\[][^\)\]]*(remaster|version|edit|mix|mono|stereo|live|feat|deluxe|anniversary)[^\)\]]*[\)\]]/ig, '')
           .trim();
 }
+// MusicBrainz allows about one request per second: space request STARTS 1 s apart (no extra waiting after each answer)
+let mbNext = 0;
+async function mbFetch(q){
+  for (let tries = 0; tries < 3; tries++){
+    const wait = mbNext - Date.now(); mbNext = Math.max(Date.now(), mbNext) + 1000;
+    if (wait > 0) await sleep(wait);
+    const r = await fetch('https://musicbrainz.org/ws/2/recording?fmt=json&limit=50&query=' + encodeURIComponent(q));
+    if (r.status !== 503) return r;
+    mbNext = Date.now() + 2000;                  // told to slow down: back off a little
+  }
+  return {ok: false};
+}
+// quick check: only songs whose title or album looks like a remaster / re-release / compilation
+const mbSuspect = (title, album) => /remaster|re-?master|version|edition|deluxe|anniversary|expanded|best of|greatest|hits|collection|essential|anthology|the very|definitive|ultimate|gold|platinum|complete|years|live|compilation|soundtrack|o\.?s\.?t|mono|stereo|mix|edit|\b(19|20)\d\d\b|המיטב|אוסף|להיטים|הגדולים|רימאסטר|מחודש|גרסה|גרסת|הופעה|חי ב/i.test(title + ' | ' + (album || ''));
+const mbCache = () => { try { return JSON.parse(localStorage.getItem('mb_years') || '{}'); } catch(e){ return {}; } };
 async function mbYear(t){
   // same matching as the online song list: title + artist first, then title only with an artist check
   const title = cleanTitle(t.title) || t.title, artist = String(t.firstArtist || t.artist || '').split(',')[0].trim(), want = norm(title), wantA = norm(artist);
   const qs = [`recording:"${title.replace(/"/g, '')}" AND artist:"${artist.replace(/"/g, '')}"`, `recording:"${title.replace(/"/g, '')}"`];
   for (const q of qs){
-    let r;
-    for (let tries = 0; tries < 3; tries++){ r = await fetch('https://musicbrainz.org/ws/2/recording?fmt=json&limit=50&query=' + encodeURIComponent(q)); if (r.status !== 503) break; await sleep(2000); }
+    const r = await mbFetch(q);
     if (!r.ok) continue;
     const d = await r.json();
     let best = null;
@@ -1160,7 +1175,6 @@ async function mbYear(t){
       if (/^\d{4}$/.test(y) && (!best || y < best)) best = y;
     }
     if (best) return best;
-    await sleep(1100);
   }
   return null;
 }
@@ -1168,12 +1182,15 @@ $('#mbBtn').onclick = async () => {
   if (mbRunning){ mbRunning = false; return; }
   mbRunning = true; $('#mbBtn').textContent = 'Stop';
   let found = 0;
-  for (let i = 0; i < tracks.length && mbRunning; i++){
-    const t = tracks[i];
-    $('#mbState').textContent = `Checking ${i + 1}/${tracks.length}…`;
+  const quick = $('#mbQuick').checked, cache = mbCache();
+  tracks.forEach(t => { if (suggestions[t.id] === undefined && t.id in cache) suggestions[t.id] = cache[t.id] || null; });   // shared with the online song list
+  const list = tracks.filter(t => !quick || mbSuspect(t.title, t.al) || suggestions[t.id] !== undefined);
+  for (let i = 0; i < list.length && mbRunning; i++){
+    const t = list[i];
+    $('#mbState').textContent = `Checking ${i + 1}/${list.length}…`;
     if (suggestions[t.id] === undefined){
       try { const y = await mbYear(t); suggestions[t.id] = y; } catch(e){ suggestions[t.id] = null; }
-      await sleep(1100);
+      const c = mbCache(); c[t.id] = suggestions[t.id] || ''; try { localStorage.setItem('mb_years', JSON.stringify(c)); } catch(e){}
     }
     const s = suggestions[t.id];
     if (s && s < (t.year || '9999') && s !== yearOf(t)) found++;

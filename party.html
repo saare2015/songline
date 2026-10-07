@@ -241,7 +241,7 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
 <body>
 <div class="app">
   <header>
-    <a class="logo" href="./">Song<span>Line</span></a><span class="pill">ONLINE</span><span class="muted" style="font-size:11px" title="All phones should show the same version">v19</span>
+    <a class="logo" href="./">Song<span>Line</span></a><span class="pill">ONLINE</span><span class="muted" style="font-size:11px" title="All phones should show the same version">v20</span>
     <nav>
       <button class="burger" id="menuBtn" aria-label="Menu" aria-expanded="false">☰</button>
       <div class="menu hidden" id="menu">
@@ -484,6 +484,7 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
         <button class="btn sm hidden" id="dkMbApply"></button>
         <span class="muted" id="dkMbState" style="font-size:13px"></span>
       </div>
+      <label class="muted row" style="font-size:13px;margin-top:6px"><input type="checkbox" id="dkMbQuick" checked> Quick: only songs that look like remasters or compilations <span id="dkMbQuickN"></span></label>
       <p class="muted" style="font-size:12px;margin:6px 0 0">Spotify often shows the year of a remaster or compilation. This checks MusicBrainz (a free music database) for the first release of each song, newest years first. Tap a year to edit it yourself.</p>
     </div>
     <div class="row" style="margin-bottom:8px;justify-content:space-between">
@@ -1513,6 +1514,7 @@ function renderDeckView(){
   $('#dkRemoveDups').classList.toggle('hidden', !extra);
   const sugN = deck.filter(t => mbSug(t)).length;
   $('#dkMbApply').classList.toggle('hidden', !sugN || mbRun);
+  { const c = mbCache(), left = deck.filter(t => !(t.id in c)); $('#dkMbQuickN').textContent = `(${left.filter(t => mbSuspect(t.n, t.al)).length} of ${left.length} unchecked)`; }
   $('#dkMbApply').textContent = `Apply ${sugN} suggestion${sugN === 1 ? '' : 's'}`;
   $('#dkList').innerHTML = list.map(t => `<li class="${dupIds.has(t.id) ? 'isdup' : ''}"><span class="y"><input class="dk-y ${over[t.id] ? 'edited' : ''}" data-dky="${esc(t.id)}" value="${esc(yr(t))}" inputmode="numeric" maxlength="4" title="Edit the year">${mbSug(t) ? `<button class="dk-sug" data-dksug="${esc(t.id)}" title="First release found on MusicBrainz">use ${esc(mbSug(t))}</button>` : ''}</span><span dir="auto"><b>${esc(t.n)}</b>${dupIds.has(t.id) ? '<span class="dk-tag dk-dup">duplicate?</span>' : ''}${used.has(t.id) ? '<span class="dk-tag dk-played">played</span>' : ''}<br><span class="muted">${esc(t.a)}</span></span><button class="dk-x" data-dkrm="${esc(t.id)}" title="Remove from the list">×</button></li>`).join('') || '<li class="muted">No songs match.</li>';
 }
@@ -1530,17 +1532,26 @@ function mbSug(t){
   return y && /^\d{4}$/.test(y) && +y < +cur ? y : null;
 }
 let mbRun = false;
+// MusicBrainz allows about one request per second: space request STARTS 1 s apart (no extra waiting after each answer)
+let mbNext = 0;
+async function mbFetch(q){
+  for (let tries = 0; tries < 3; tries++){
+    const wait = mbNext - Date.now(); mbNext = Math.max(Date.now(), mbNext) + 1000;
+    if (wait > 0) await sleep(wait);
+    const r = await fetch('https://musicbrainz.org/ws/2/recording?fmt=json&limit=50&query=' + encodeURIComponent(q));
+    if (r.status !== 503) return r;
+    mbNext = Date.now() + 2000;                  // told to slow down: back off a little
+  }
+  return {ok: false};
+}
+// quick check: only songs whose title or album looks like a remaster / re-release / compilation
+const mbSuspect = (title, album) => /remaster|re-?master|version|edition|deluxe|anniversary|expanded|best of|greatest|hits|collection|essential|anthology|the very|definitive|ultimate|gold|platinum|complete|years|live|compilation|soundtrack|o\.?s\.?t|mono|stereo|mix|edit|\b(19|20)\d\d\b|המיטב|אוסף|להיטים|הגדולים|רימאסטר|מחודש|גרסה|גרסת|הופעה|חי ב/i.test(title + ' | ' + (album || ''));
 async function mbLookup(t){
   const title = cleanTitle(t.n) || t.n, artist = String(t.a || '').split(',')[0].trim(), want = norm(title), wantA = norm(artist);
   const q1 = `recording:"${title.replace(/"/g, '')}" AND artist:"${artist.replace(/"/g, '')}"`;
   const q2 = `recording:"${title.replace(/"/g, '')}"`;
   for (const q of [q1, q2]){
-    let r;
-    for (let tries = 0; tries < 3; tries++){
-      r = await fetch('https://musicbrainz.org/ws/2/recording?fmt=json&limit=50&query=' + encodeURIComponent(q));
-      if (r.status !== 503) break;
-      await sleep(2000);
-    }
+    const r = await mbFetch(q);
     if (!r.ok) continue;
     const d = await r.json();
     let best = null;
@@ -1556,7 +1567,6 @@ async function mbLookup(t){
       if (/^\d{4}$/.test(y) && (!best || y < best)) best = y;
     }
     if (best) return best;
-    await sleep(1100);
   }
   return null;
 }
@@ -1564,7 +1574,8 @@ $('#dkMb').onclick = async () => {
   if (mbRun){ mbRun = false; return; }
   mbRun = true; $('#dkMb').textContent = '⏹ Stop';
   const over = store.json('year_overrides', {}), cache = mbCache();
-  const todo = deck.filter(t => !(t.id in cache)).sort((a, b) => +(over[b.id] || b.y) - +(over[a.id] || a.y));   // newest first: most likely remasters
+  const quick = $('#dkMbQuick').checked;
+  const todo = deck.filter(t => !(t.id in cache) && (!quick || mbSuspect(t.n, t.al))).sort((a, b) => +(over[b.id] || b.y) - +(over[a.id] || a.y));   // newest first: most likely remasters
   let done = 0;
   for (const t of todo){
     if (!mbRun) break;
@@ -1572,11 +1583,10 @@ $('#dkMb').onclick = async () => {
     let y = null; try { y = await mbLookup(t); } catch(e){}
     const c = mbCache(); c[t.id] = y || ''; store.set('mb_years', JSON.stringify(c));
     if (done % 5 === 0) renderDeckView();
-    await sleep(1100);                       // MusicBrainz allows about one request per second
   }
   mbRun = false; $('#dkMb').textContent = '🔎 Find original years';
   const n = deck.filter(t => mbSug(t)).length;
-  $('#dkMbState').textContent = todo.length ? `Done. ${n} song${n === 1 ? '' : 's'} with an earlier original year (shown in yellow).` : `Already checked. ${n} suggestion${n === 1 ? '' : 's'}.`;
+  $('#dkMbState').textContent = todo.length ? `Done. ${n} song${n === 1 ? '' : 's'} with an earlier original year (shown in yellow).` : `Already checked. ${n} suggestion${n === 1 ? '' : 's'}.` + (quick ? ' Untick Quick to check every song.' : '');
   renderDeckView();
 };
 $('#dkMbApply').onclick = () => { deck.forEach(t => { const y = mbSug(t); if (y) setDeckYear(t.id, y); }); renderDeckView(); toast('Years updated'); };
@@ -1587,6 +1597,8 @@ function openDeckView(){ if (!deck.length) return; $('#deckModal').classList.rem
 $('#viewDeck').onclick = openDeckView; $('#viewDeck2').onclick = openDeckView;
 ['dkSearch', 'dkSort', 'dkDupOnly'].forEach(id => $('#' + id).addEventListener('input', renderDeckView));
 $('#dkDupOnly').addEventListener('change', renderDeckView);
+$('#dkMbQuick').checked = store.get('mb_quick') !== '0';
+$('#dkMbQuick').addEventListener('change', e => store.set('mb_quick', e.target.checked ? '1' : '0'));
 $('#dkList').onclick = e => {
   const id = e.target.dataset.dkrm; if (id){ deck = deck.filter(t => t.id !== id); saveDeck(); return; }
   const sg = e.target.dataset.dksug; if (sg){ setDeckYear(sg, mbCache()[sg]); renderDeckView(); }
