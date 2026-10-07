@@ -11,8 +11,8 @@
 //   projectId: "songline-xxxx",
 //   appId: "1:123:web:abc"
 // };
-window.SONGLINE_FIREBASE = const firebaseConfig = {
-
+window.SONGLINE_FIREBASE = {
+  
   apiKey: "AIzaSyAk_6tfY-L5qIc-cr9Ho9sZkv60GQa7VsQ",
 
   authDomain: "songline-38fac.firebaseapp.com",
