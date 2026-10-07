@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0d0b16">
+<title>SongLine TV</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="config.js"></script>
+<style>
+:root{--bg:#0d0b16;--panel:#191529;--line:#2e2747;--text:#f4f1fc;--muted:#a49cbd;--accent:#ff3d8b;--accent2:#22d3ee;--accent3:#7c3aed;--ok:#34d399;--bad:#f87171;--card:#241f38}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;overflow:hidden}
+/* everything is sized from the screen width so it fills any TV */
+body{font-size:1.15vw}
+.hidden{display:none!important}
+.muted{color:var(--muted)}
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;padding:1.6vw 2vw}
+.top{display:flex;align-items:center;gap:1.2vw;margin-bottom:1.2vw}
+.logo{font-weight:900;font-size:2.2vw;letter-spacing:-.05vw}
+.logo span{color:var(--accent)}
+.pill{background:var(--accent2);color:#04212a;font-weight:900;font-size:.9vw;border-radius:999px;padding:.2vw .8vw}
+.joinbox{margin-left:auto;display:flex;align-items:center;gap:1vw;background:var(--panel);border:1px solid var(--line);border-radius:1vw;padding:.6vw 1vw}
+.joinbox .qr{background:#fff;border-radius:.5vw;padding:.3vw;width:5.4vw;height:5.4vw}
+.joinbox .qr svg{width:100%;height:100%;display:block}
+.joinbox .code{font:900 2.4vw/1 ui-monospace,Menlo,monospace;letter-spacing:.3vw;color:var(--accent2)}
+.btn{background:var(--accent);color:#fff;border:0;border-radius:.8vw;padding:.8vw 1.6vw;font:inherit;font-weight:800;cursor:pointer}
+.btn.ghost{background:none;border:1px solid var(--line);color:var(--text)}
+
+/* setup */
+.setup{margin:auto;text-align:center;max-width:60vw}
+.setup h1{font-size:4vw;margin:0 0 1vw}
+.setup input{font:900 4vw ui-monospace,Menlo,monospace;letter-spacing:1vw;text-align:center;width:22vw;padding:.6vw;border-radius:1vw;border:2px solid var(--line);background:var(--panel);color:var(--text);text-transform:uppercase}
+
+/* lobby */
+.lobby{flex:1;display:grid;grid-template-columns:1.2fr 1fr;gap:2vw;align-items:center}
+.welcome{background:linear-gradient(135deg,var(--accent3),var(--accent));border-radius:2vw;padding:2.4vw;font-weight:900;font-size:4.4vw;line-height:1.1;text-align:center;white-space:pre-line;overflow-wrap:anywhere}
+.bigjoin{text-align:center}
+.bigjoin .qr{background:#fff;border-radius:1.2vw;padding:1vw;width:22vw;height:22vw;margin:0 auto 1vw}
+.bigjoin .qr svg{width:100%;height:100%;display:block}
+.bigjoin .code{font:900 6vw/1 ui-monospace,Menlo,monospace;letter-spacing:1vw;color:var(--accent2)}
+.lobby-players{display:flex;flex-wrap:wrap;gap:.8vw;justify-content:center;margin-top:1.6vw}
+.lobby-players span{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:.5vw 1.2vw;font-weight:800;font-size:1.5vw;border-left:.5vw solid var(--pc,var(--line))}
+
+/* game */
+.game{flex:1;display:grid;grid-template-columns:23vw 1fr;gap:1.6vw;min-height:0}
+.board{background:var(--panel);border:1px solid var(--line);border-radius:1.4vw;padding:1vw;display:flex;flex-direction:column;gap:.7vw;overflow:hidden}
+.board h3{margin:0 0 .2vw;font-size:1.1vw;color:var(--muted);letter-spacing:.2vw;text-transform:uppercase}
+.prow{display:grid;grid-template-columns:auto 1fr auto;gap:.3vw .8vw;align-items:center;background:var(--card);border-radius:.9vw;padding:.7vw .9vw;border-left:.45vw solid var(--pc,transparent);transition:transform .3s}
+.prow.turn{outline:.2vw solid var(--accent);transform:scale(1.03)}
+.prow .rank{font-weight:900;color:var(--muted);font-size:1.2vw;width:1.6vw}
+.prow .nm{font-weight:900;font-size:1.5vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prow .tk{font-size:1.2vw;white-space:nowrap}
+.prow .bar{grid-column:2 / 4;height:.55vw;background:var(--line);border-radius:999px;overflow:hidden}
+.prow .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent3),var(--accent));border-radius:999px;transition:width .6s}
+.prow .cnt{grid-column:2 / 4;font-size:1vw;color:var(--muted)}
+.prow .dot{width:.7vw;height:.7vw;border-radius:50%;background:var(--ok);display:inline-block;margin-right:.4vw;vertical-align:middle}
+.prow .dot.off{background:#555}
+.main{display:flex;flex-direction:column;min-height:0;min-width:0}
+.status{font-size:3vw;font-weight:900;line-height:1.1}
+.sub{font-size:1.5vw;color:var(--muted);margin:.4vw 0 1vw}
+.timer{position:absolute;right:2vw;top:9vw;font:900 5vw/1 system-ui;color:var(--accent2);font-variant-numeric:tabular-nums;text-shadow:0 .3vw 1.5vw rgba(0,0,0,.5)}
+.timer.up{font-size:2.6vw;color:var(--accent)}
+.tlwrap{flex:1;display:flex;flex-direction:column;justify-content:center;min-height:0}
+.tltitle{font-size:1.4vw;color:var(--muted);margin-bottom:.8vw;font-weight:700}
+.tl{display:flex;gap:1vw;align-items:stretch;overflow:hidden;padding:1vw .2vw;flex-wrap:nowrap;perspective:1200px}
+.tl.wrap{flex-wrap:wrap;overflow:visible}
+.card{--cw:11vw;width:var(--cw);min-width:var(--cw);background:var(--card);border-radius:1vw;padding:.7vw;display:flex;flex-direction:column;gap:.35vw;text-align:center;position:relative}
+.card img,.card .nocv{width:100%;aspect-ratio:1;object-fit:cover;border-radius:.6vw;background:#000}
+.card .nocv{display:flex;align-items:center;justify-content:center;font-size:4vw;background:var(--line)}
+.card .y{font-weight:900;font-size:calc(var(--cw)*.2);color:var(--accent2);line-height:1}
+.card .t{font-weight:800;font-size:max(.8vw,calc(var(--cw)*.09));line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.card .a{font-size:.85vw;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card.mystery{background:linear-gradient(135deg,var(--accent3),var(--accent));justify-content:center;align-items:center;font-size:calc(var(--cw)*.28);font-weight:900;min-height:calc(var(--cw)*1.45);animation:bob 1.4s ease-in-out infinite}
+.card.mystery small{font-size:1vw;display:block;margin-top:.4vw}
+.card.new{outline:.25vw solid var(--ok);animation:flipIn .8s ease-out}
+.card.wrong{background:#3b1323;outline:.25vw dashed var(--bad);animation:shake .5s ease}
+.gap{width:1.4vw;min-width:1.4vw;border-radius:.6vw;position:relative}
+.gap.bet{background:rgba(34,211,238,.18);outline:.15vw dashed var(--accent2);width:auto;min-width:3vw;padding:.4vw .3vw;writing-mode:vertical-rl;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1.1vw;color:#a5f3fc}
+.gap.bet .who{white-space:nowrap}
+.decade{writing-mode:vertical-rl;font-size:.9vw;font-weight:900;letter-spacing:.3vw;color:var(--muted);display:flex;align-items:center;justify-content:center;border-left:1px solid var(--line);padding-left:.3vw}
+.overview{display:grid;gap:1vw;align-content:start;overflow:hidden}
+.ov-row{display:flex;align-items:center;gap:1vw}
+.ov-row .who{width:10vw;font-weight:900;font-size:1.3vw;border-left:.4vw solid var(--pc,var(--line));padding-left:.6vw}
+.ov-row .mini{display:flex;gap:.5vw;flex-wrap:nowrap;overflow:hidden}
+.ov-row .mini span{background:var(--card);border-radius:.5vw;padding:.35vw .6vw;font-weight:900;color:var(--accent2);font-size:1.1vw;white-space:nowrap}
+.ov-row .mini img{width:2.6vw;height:2.6vw;border-radius:.3vw;object-fit:cover;vertical-align:middle;margin-right:.3vw}
+
+/* reveal + winner overlays */
+.overlay{position:fixed;inset:0;background:rgba(8,6,14,.82);display:flex;align-items:center;justify-content:center;z-index:20;animation:fade .3s}
+.reveal{display:grid;grid-template-columns:auto 1fr;gap:3vw;align-items:center;max-width:80vw;animation:pop .6s cubic-bezier(.2,.8,.3,1.2)}
+.reveal img,.reveal .nocv{width:28vw;height:28vw;border-radius:1.6vw;object-fit:cover;box-shadow:0 2vw 5vw rgba(0,0,0,.6);background:var(--line);display:flex;align-items:center;justify-content:center;font-size:10vw}
+.reveal .y{font:900 9vw/1 system-ui;color:var(--accent2)}
+.reveal .t{font-size:3.4vw;font-weight:900;line-height:1.1}
+.reveal .a{font-size:2vw;color:var(--muted);margin-top:.4vw}
+.reveal .out{font-size:2.6vw;font-weight:900;margin-top:1.4vw}
+.reveal .out.ok{color:var(--ok)}.reveal .out.bad{color:var(--bad)}
+.reveal .fact{margin-top:1.2vw;font-size:1.3vw;line-height:1.45;color:#d9d3ea;max-width:44vw;background:rgba(255,255,255,.06);border-radius:1vw;padding:1vw 1.2vw}
+.win{text-align:center}
+.win .trophy{font-size:12vw;animation:pop .8s}
+.win .name{font-size:6vw;font-weight:900}
+.win ol{list-style:none;padding:0;margin:2vw auto 0;font-size:2vw;display:inline-block;text-align:left}
+.win li{margin:.4vw 0}
+.confetti{position:fixed;top:-5vh;width:1vw;height:1.6vw;border-radius:.2vw;animation:fall linear forwards;z-index:21}
+@keyframes fall{to{transform:translateY(115vh) rotate(720deg)}}
+@keyframes flipIn{0%{transform:rotateY(90deg) scale(.85);opacity:0}60%{transform:rotateY(-12deg) scale(1.04);opacity:1}100%{transform:none}}
+@keyframes shake{0%,100%{transform:none}20%,60%{transform:translateX(-1vw)}40%,80%{transform:translateX(1vw)}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-.6vw)}}
+@keyframes pop{0%{transform:scale(.6);opacity:0}100%{transform:none;opacity:1}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.fsbtn{position:fixed;right:1.2vw;bottom:1.2vw;z-index:30;opacity:.7}
+.net{position:fixed;left:0;right:0;top:0;background:#b45309;color:#fff;text-align:center;font-weight:800;padding:.5vw;z-index:40;font-size:1.2vw}
+</style>
+</head>
+<body>
+
+<!-- room code entry -->
+<div class="screen" id="s-setup">
+  <div class="top"><div class="logo">Song<span>Line</span></div><span class="pill">TV</span></div>
+  <div class="setup">
+    <h1>📺 TV mode</h1>
+    <p class="muted" style="font-size:1.6vw" id="setupMsg">Enter the room code shown on the host's phone.</p>
+    <input id="codeIn" maxlength="4" autocomplete="off" autofocus>
+    <div style="margin-top:1.6vw"><button class="btn" id="goBtn" style="font-size:1.8vw">Show the game</button></div>
+  </div>
+</div>
+
+<!-- lobby -->
+<div class="screen hidden" id="s-lobby">
+  <div class="top"><div class="logo">Song<span>Line</span></div><span class="pill">TV</span></div>
+  <div class="lobby">
+    <div>
+      <div class="welcome" id="lbWelcome" dir="auto"></div>
+      <div class="lobby-players" id="lbPlayers"></div>
+    </div>
+    <div class="bigjoin">
+      <div class="qr" id="lbQr"></div>
+      <div class="muted" style="font-size:1.6vw">Scan to join, or enter the code</div>
+      <div class="code" id="lbCode"></div>
+    </div>
+  </div>
+</div>
+
+<!-- game -->
+<div class="screen hidden" id="s-game">
+  <div class="top">
+    <div class="logo">Song<span>Line</span></div><span class="pill">TV</span>
+    <span class="muted" id="gmClip" style="font-size:1.1vw"></span>
+    <div class="joinbox"><div><div class="muted" style="font-size:.9vw">Join</div><div class="code" id="gmCode"></div></div><div class="qr" id="gmQr"></div></div>
+  </div>
+  <div class="game">
+    <div class="board"><h3>Scoreboard</h3><div id="board" style="display:flex;flex-direction:column;gap:.7vw"></div></div>
+    <div class="main">
+      <div class="status" id="status" dir="auto"></div>
+      <div class="sub" id="sub" dir="auto"></div>
+      <div class="tlwrap">
+        <div class="tltitle" id="tlTitle"></div>
+        <div id="tlArea"></div>
+      </div>
+    </div>
+  </div>
+  <div class="timer hidden" id="timer"></div>
+</div>
+
+<div id="overlay"></div>
+<button class="btn ghost fsbtn" id="fsBtn">⛶ Full screen</button>
+<div class="net hidden" id="net">📡 Connection lost. Reconnecting…</div>
+
+<script>
+(() => {
+'use strict';
+const FB = 'https://www.gstatic.com/firebasejs/12.19.0/';
+const BASE = location.origin + location.pathname.replace(/[^/]*$/, '');
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store = {
+  get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} },
+  json(k,d){ try{ return JSON.parse(this.get(k)) ?? d; }catch(e){ return d; } }
+};
+const b64d = s => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))));
+const b64e = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const show = id => ['s-setup', 's-lobby', 's-game'].forEach(x => $('#' + x).classList.toggle('hidden', x !== id));
+const okUrl = u => /^https:\/\/[^'"()\s]+$/.test(u || '');
+const norm = s => String(s || '').toLowerCase().normalize('NFKD').replace(/[̀-֑ͯ-ׇ]/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+const cleanTitle = s => String(s || '').replace(/\s+-\s+.*$/, '').replace(/\s*[\(\[][^\)\]]*(remaster|version|edit|mix|mono|stereo|live|feat|deluxe|anniversary)[^\)\]]*[\)\]]/ig, '').trim();
+const DURS = [1, 2, 3, 4, 5, 7, 10, 15, 20, 30, 45, 60, 90, Infinity];
+
+// ---------- colors: same theme as this browser's online page, if any ----------
+(() => {
+  const T = {neon: ['#ff3d8b', '#22d3ee', '#7c3aed'], ocean: ['#3b82f6', '#2dd4bf', '#1d4ed8'], forest: ['#22c55e', '#facc15', '#15803d'],
+             sunset: ['#f97316', '#fbbf24', '#e11d48'], grape: ['#a855f7', '#f472b6', '#6d28d9'], mono: ['#e5e7eb', '#9ca3af', '#4b5563']};
+  const t = store.json('ui_theme', {}), b = T[t.preset] || T.neon, r = document.documentElement.style;
+  r.setProperty('--accent', t.accent || b[0]); r.setProperty('--accent2', t.accent2 || b[1]); r.setProperty('--accent3', b[2]);
+})();
+
+// ---------- config ----------
+function getConfig(){
+  if (window.SONGLINE_FIREBASE) return window.SONGLINE_FIREBASE;
+  const p = new URLSearchParams(location.search).get('cfg');
+  if (p){ try { const c = JSON.parse(b64d(p)); if (c.apiKey){ store.set('fb_config', JSON.stringify(c)); return c; } } catch(e){} }
+  return store.json('fb_config', null);
+}
+let fb, db, code = null, room = null, unsub = null;
+const R = p => fb.ref(db, `rooms/${code}` + (p ? '/' + p : ''));
+const arr = v => Array.isArray(v) ? v.filter(Boolean) : v ? Object.values(v) : [];
+const players = () => room?.players || {};
+const order = () => arr(room?.order).filter(u => players()[u]);
+const active = () => { const o = order(); return o.length ? o[(room.turn || 0) % o.length] : null; };
+const pname = u => players()[u]?.name || '?';
+const pcolor = u => /^#[0-9a-f]{6}$/i.test(players()[u]?.color || '') ? players()[u].color : 'var(--line)';
+const tok = u => room?.tokens?.[u] ?? 0;
+const timeline = u => Object.entries(room?.timelines?.[u] || {}).map(([k, c]) => ({k, ...c})).sort((a, b) => (+a.y - +b.y) || String(a.n).localeCompare(String(b.n)));
+const $$ = s => [...document.querySelectorAll(s)];
+// card width so the whole timeline fits on one row (down to a readable minimum, then it scrolls to the action)
+const cardW = n => Math.max(6.2, Math.min(11, 50 / Math.max(1, n + 1))).toFixed(2) + 'vw';
+const decadeOf = y => { const d = Math.floor(+y / 10) * 10; return isFinite(d) && d > 0 ? (d < 2000 ? `${d % 100 || '00'}s` : `${d}s`) : ''; };
+
+function qrInto(el, text){ if (!window.qrcode) return; const q = qrcode(0, 'L'); q.addData(text); q.make(); el.innerHTML = q.createSvgTag(4, 0); }
+function joinLink(){
+  const cfg = getConfig();
+  const extra = window.SONGLINE_FIREBASE || !cfg ? '' : '&cfg=' + b64e(JSON.stringify((({apiKey, authDomain, databaseURL, projectId, appId}) => ({apiKey, authDomain, databaseURL, projectId, appId}))(cfg)));
+  return `${BASE}party.html?room=${code}${extra}`;
+}
+
+async function start(){
+  const cfg = getConfig();
+  if (!cfg){
+    $('#setupMsg').innerHTML = 'This TV doesn\'t know your Firebase project yet.<br>Either open the TV link from the host\'s phone (☰ → 📺 TV mode → "Open on this device"), or add your settings to <b>config.js</b> (see the README).';
+    $('#goBtn').disabled = true; return;
+  }
+  const [appM, authM, dbM] = await Promise.all([import(FB + 'firebase-app.js'), import(FB + 'firebase-auth.js'), import(FB + 'firebase-database.js')]);
+  fb = {...dbM, ...authM};
+  const app = appM.initializeApp(cfg);
+  await authM.signInAnonymously(authM.getAuth(app));
+  db = dbM.getDatabase(app);
+  let ever = false;
+  try { fb.onValue(fb.ref(db, '.info/connected'), s => { const v = s.val(); if (v === true){ ever = true; $('#net').classList.add('hidden'); } else if (v === false && ever) $('#net').classList.remove('hidden'); }); } catch(e){}
+  const q = (new URLSearchParams(location.search).get('room') || '').toUpperCase();
+  if (q) watch(q);
+}
+function watch(c){
+  code = c.trim().toUpperCase();
+  if (!/^[A-Z0-9]{4}$/.test(code)){ $('#setupMsg').textContent = 'Room codes are 4 letters/numbers.'; return; }
+  history.replaceState(null, '', location.pathname + '?room=' + code + (new URLSearchParams(location.search).get('cfg') ? '&cfg=' + new URLSearchParams(location.search).get('cfg') : ''));
+  if (unsub) unsub();
+  unsub = fb.onValue(R(), s => {
+    room = s.val();
+    if (!room){ show('s-setup'); $('#setupMsg').textContent = `No room called ${code} (yet). Check the code on the host's phone.`; return; }
+    render();
+  });
+}
+$('#goBtn').onclick = () => watch($('#codeIn').value);
+$('#codeIn').onkeydown = e => { if (e.key === 'Enter') watch($('#codeIn').value); };
+$('#fsBtn').onclick = () => { (document.documentElement.requestFullscreen?.() || Promise.resolve()).catch(() => {}); };
+document.addEventListener('fullscreenchange', () => $('#fsBtn').classList.toggle('hidden', !!document.fullscreenElement));
+let wake = null;
+async function keepAwake(){ try { if ('wakeLock' in navigator && document.visibilityState === 'visible') wake = await navigator.wakeLock.request('screen'); } catch(e){} }
+document.addEventListener('visibilitychange', keepAwake); keepAwake();
+
+// ---------- render ----------
+let lastJoin = '';
+function render(){
+  const link = joinLink();
+  if (link !== lastJoin){ lastJoin = link; qrInto($('#lbQr'), link); qrInto($('#gmQr'), link); }
+  $('#lbCode').textContent = code; $('#gmCode').textContent = code;
+  if (room.state === 'lobby') renderLobby(); else renderGame();
+}
+function renderLobby(){
+  show('s-lobby'); winShown = null; shownReveal = null; clearOverlay();
+  const wm = (room.settings?.welcome || '').trim() || '🎵 SongLine';
+  $('#lbWelcome').textContent = wm;
+  $('#lbPlayers').innerHTML = Object.entries(players()).sort((a, b) => a[1].joined - b[1].joined)
+    .map(([u, p]) => `<span style="--pc:${pcolor(u)}" dir="auto">${esc(p.name)}${u === room.host ? ' 👑' : ''}</span>`).join('') || '<span class="muted">Waiting for players…</span>';
+}
+
+function clipSummary(){
+  const S = room.settings || {}, i = Math.min(13, Math.max(0, +(S.playLen ?? 13)));
+  const len = !isFinite(DURS[i]) ? 'whole song' : DURS[i] + ' s';
+  return `🎵 ${len}${S.shrink && isFinite(DURS[i]) ? ' · 📉 shrinking' : ''}`;
+}
+
+let shownReveal = null, overviewI = 0, overviewT = null, winShown = null;
+function renderGame(){
+  show('s-game');
+  const o = order(), act = active(), round = room.round || {state: 'idle'}, pl = room.placement || {}, ch = room.challenges || {};
+  const target = room.settings?.target ?? 10, w = room.winner;
+  $('#gmClip').textContent = clipSummary();
+  // scoreboard, sorted by cards (turn order breaks ties)
+  const ranked = o.slice().sort((a, b) => timeline(b).length - timeline(a).length || o.indexOf(a) - o.indexOf(b));
+  $('#board').innerHTML = ranked.map((u, i) => {
+    const n = timeline(u).length, p = players()[u];
+    return `<div class="prow ${u === act && !w ? 'turn' : ''}" style="--pc:${pcolor(u)}">
+      <div class="rank">${i + 1}</div><div class="nm" dir="auto"><span class="dot ${p.online === false ? 'off' : ''}"></span>${esc(p.name)}${u === room.host ? ' 👑' : ''}</div><div class="tk">🪙 ${tok(u)}</div>
+      <div class="bar"><i style="width:${Math.min(100, n / target * 100)}%"></i></div><div class="cnt">🃏 ${n} / ${target}${u === act && !w ? ' · 🎯 playing now' : ''}</div></div>`;
+  }).join('');
+  // status
+  let status = '', sub = '';
+  const dealing = Object.values(room.deals || {}).some(d => d.why === 'start');
+  if (dealing){ status = '🃏 Dealing starting cards…'; sub = 'Everyone gets one revealed card.'; }
+  else if (round.state === 'idle'){ status = `🎯 ${esc(pname(act))}'s turn`; sub = 'Get ready. The next song is coming up…'; }
+  else if (round.state === 'playing'){ status = `🎵 ${esc(pname(act))} is placing the song`; sub = pl.slot != null ? (pl.locked ? '🔒 Locked in' : 'Thinking…') : 'Listen…'; }
+  else if (round.state === 'challenge'){ const n = Object.keys(ch).length; status = `🔒 ${esc(pname(act))} locked in`; sub = n ? `🕵 ${n} steal${n > 1 ? 's' : ''}: ${Object.keys(ch).map(u => esc(pname(u))).join(', ')}` : 'Anyone stealing?'; }
+  else if (round.state === 'revealed'){ const stolen = !round.correct && round.owner && round.owner !== round.player; status = round.correct ? `✅ ${esc(pname(round.player))} got it!` : stolen ? `🕵 ${esc(pname(round.owner))} stole it!` : `❌ Not this time, ${esc(pname(round.player))}`; sub = ''; }
+  $('#status').innerHTML = status; $('#sub').innerHTML = sub;
+  // main area
+  const live = ['playing', 'challenge', 'revealed'].includes(round.state) && !dealing;
+  if (live){ stopOverview(); renderTimeline(round.state === 'revealed' && round.owner && round.owner !== round.player ? round.owner : round.player, round, pl, ch); }
+  else startOverview();
+  // big moments
+  if (w){ if (winShown !== w) showWinner(w, ranked, target); }
+  else if (round.state === 'revealed' && round.card && shownReveal !== round.n){ shownReveal = round.n; showReveal(round); }
+  else if (round.state !== 'revealed' && !w) clearOverlay();
+}
+
+function cardHtml(c, cls = ''){
+  return `<div class="card ${cls}">${okUrl(c.c) ? `<img src="${esc(c.c)}" alt="">` : '<div class="nocv">💿</div>'}<div class="y">${esc(c.y)}</div><div class="t" dir="auto">${esc(c.n)}</div><div class="a" dir="auto">${esc(c.a)}</div></div>`;
+}
+function renderTimeline(uid, round, pl, ch){
+  const cards = timeline(uid);
+  $('#tlTitle').innerHTML = `<span style="color:${pcolor(uid)}">●</span> ${esc(pname(uid))}'s timeline · ${cards.length} card${cards.length === 1 ? '' : 's'}`;
+  const bets = i => Object.entries(ch).filter(([, c]) => c.slot === i).map(([u]) => pname(u));
+  let html = '', last = null;
+  const dec = c => { const d = decadeOf(c.y); if (d && d !== last){ last = d; return `<div class="decade">${d}</div>`; } return ''; };
+  const placing = ['playing', 'challenge'].includes(round.state);
+  for (let i = 0; i <= cards.length; i++){
+    if (placing && pl.slot === i) html += `<div class="card mystery">🎵 ?<small>${pl.locked ? '🔒 locked' : '…'}</small></div>`;
+    else if (round.state === 'revealed' && !round.correct && round.player === uid && round.slot === i && round.card) html += cardHtml({...round.card, a: 'Wrong spot'}, 'wrong');
+    else if (placing){ const b = bets(i); html += `<div class="gap ${b.length ? 'bet' : ''}">${b.length ? `<span class="who">🕵 ${esc(b.join(', '))}</span>` : ''}</div>`; }
+    if (i < cards.length) html += dec(cards[i]) + cardHtml(cards[i], round.state === 'revealed' && cards[i].k === round.cardKey && round.owner === uid ? 'new' : '');
+  }
+  $('#tlArea').innerHTML = `<div class="tl" id="tl" style="--cw:${cardW(cards.length + (placing ? 1 : 0))}">${html}</div>`;
+  $$('#tl .card').forEach(c => c.style.setProperty('--cw', cardW(cards.length + (placing ? 1 : 0))));
+  // keep the action in view on long timelines
+  const tl = $('#tl'), focus = tl.querySelector('.mystery, .new, .wrong');
+  if (focus) tl.scrollLeft = Math.max(0, focus.offsetLeft - tl.clientWidth / 2 + focus.offsetWidth / 2);
+}
+
+// between turns: cycle through everyone's timeline, then a compact overview of all
+function startOverview(){
+  if (overviewT) { drawOverview(); return; }
+  drawOverview();
+  overviewT = setInterval(() => { overviewI++; drawOverview(); }, 7000);
+}
+function stopOverview(){ clearInterval(overviewT); overviewT = null; }
+function drawOverview(){
+  const o = order(); if (!o.length) return;
+  const step = overviewI % (o.length + 1);
+  if (step === o.length){
+    $('#tlTitle').textContent = '📊 All timelines';
+    $('#tlArea').innerHTML = `<div class="overview">${o.map(u => `<div class="ov-row"><div class="who" style="--pc:${pcolor(u)}" dir="auto">${esc(pname(u))}</div><div class="mini">${timeline(u).map(c => `<span>${okUrl(c.c) ? `<img src="${esc(c.c)}" alt="">` : ''}${esc(c.y)}</span>`).join('') || '<span class="muted">–</span>'}</div></div>`).join('')}</div>`;
+  } else {
+    const u = o[step], cards = timeline(u);
+    $('#tlTitle').innerHTML = `<span style="color:${pcolor(u)}">●</span> ${esc(pname(u))}'s timeline · ${cards.length} card${cards.length === 1 ? '' : 's'}`;
+    let last = null;
+    $('#tlArea').innerHTML = `<div class="tl" id="tl">${cards.map(c => { const d = decadeOf(c.y), m = d && d !== last ? `<div class="decade">${d}</div>` : ''; last = d; return m + cardHtml(c); }).join('') || '<div class="muted" style="font-size:1.6vw">No cards yet</div>'}</div>`;
+    $$('#tl .card').forEach(c => c.style.setProperty('--cw', cardW(cards.length)));
+  }
+}
+
+// big reveal
+async function showReveal(round){
+  const c = round.card, stolen = !round.correct && round.owner && round.owner !== round.player;
+  const out = round.correct ? `<div class="out ok">✅ ${esc(pname(round.player))} got it!</div>` : stolen ? `<div class="out ok">🕵 ${esc(pname(round.owner))} stole it!</div>` : `<div class="out bad">❌ Not this time, ${esc(pname(round.player))}</div>`;
+  $('#overlay').innerHTML = `<div class="overlay" id="rv"><div class="reveal">${okUrl(c.c) ? `<img src="${esc(c.c)}" alt="">` : '<div class="nocv">💿</div>'}<div><div class="y">${esc(c.y)}</div><div class="t" dir="auto">${esc(c.n)}</div><div class="a" dir="auto">${esc(c.a)}${c.al ? ' · ' + esc(c.al) : ''}</div>${out}<div class="fact hidden" id="rvFact" dir="auto"></div></div></div></div>`;
+  const n = round.n;
+  setTimeout(() => { if (shownReveal === n && room?.round?.n === n) clearOverlay(); }, 9000);
+  const f = await wikiFact(c);
+  const box = $('#rvFact');
+  if (box && !f.none){ box.innerHTML = `<b>📖 ${f.about === 'album' ? 'About the album' : 'Did you know?'}</b> ${esc(f.fact)}`; box.classList.remove('hidden'); }
+}
+function clearOverlay(){ if (!winShown || !room?.winner) $('#overlay').innerHTML = ''; }
+function showWinner(w, ranked, target){
+  winShown = w;
+  $('#overlay').innerHTML = `<div class="overlay"><div class="win"><div class="trophy">🏆</div><div class="name" dir="auto">${esc(pname(w))} wins!</div>
+    <ol>${ranked.map((u, i) => `<li>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} <b dir="auto">${esc(pname(u))}</b> · 🃏 ${timeline(u).length} · 🪙 ${tok(u)}</li>`).join('')}</ol></div></div>`;
+  const colors = ['#ff3d8b', '#22d3ee', '#facc15', '#a855f7', '#34d399', '#f97316'];
+  for (let i = 0; i < 90; i++){
+    const d = document.createElement('i'); d.className = 'confetti';
+    d.style.left = Math.random() * 100 + 'vw'; d.style.background = colors[i % colors.length];
+    d.style.animationDuration = (2.5 + Math.random() * 2.5) + 's'; d.style.animationDelay = Math.random() * 1.5 + 's';
+    $('#overlay').appendChild(d);
+  }
+}
+
+// facts from Wikipedia (same as on the phones; cached in this browser)
+async function wikiFact(c){
+  const key = 'wk_' + c.id, cached = store.json(key, null);
+  if (cached) return cached;
+  const he = /[֐-׿]/.test((c.n || '') + (c.a || '')), lang = he ? 'he' : 'en';
+  const title = cleanTitle(c.n) || c.n || '', artist = String(c.a || '').split(',')[0], album = cleanTitle(c.al || '');
+  const tries = [[`${title} ${artist}`, 'song']];
+  if (!he) tries.unshift([`"${title}" song ${artist}`, 'song']);
+  if (album && norm(album) !== norm(title)) tries.push([`${album} ${artist} album`, 'album']);
+  for (const [q, about] of tries){
+    try {
+      const d = await (await fetch(`https://${lang}.wikipedia.org/w/api.php?action=query&list=search&format=json&origin=*&srlimit=5&srsearch=${encodeURIComponent(q)}`)).json();
+      const want = norm(about === 'song' ? title : album);
+      const hit = (d.query?.search || []).find(x => want && norm(x.title).includes(want));
+      if (!hit) continue;
+      const sm = await (await fetch(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(hit.title.replace(/ /g, '_'))}`)).json();
+      if (!sm.extract) continue;
+      const sent = sm.extract.match(/[^.!?]+[.!?]+(\s|$)/g) || [sm.extract];
+      const res = {fact: (sent.length > 1 ? sent.slice(1, 3) : sent).join(' ').trim(), about};
+      store.set(key, JSON.stringify(res)); return res;
+    } catch(e){}
+  }
+  return {none: true};
+}
+
+// live countdown (when the host has it switched on)
+setInterval(() => {
+  const r = room?.round, el = $('#timer');
+  const showIt = room?.state === 'game' && room.settings?.showTimer !== false && r && ['playing', 'challenge'].includes(r.state) && r.until;
+  el.classList.toggle('hidden', !showIt);
+  if (!showIt) return;
+  const left = r.until - Date.now();
+  el.classList.toggle('up', left <= 0 || !!r.timeup);
+  el.textContent = left > 0 && !r.timeup ? `⏱ ${(left / 1000).toFixed(left < 10000 ? 1 : 0)}` : "⏱ Time's up!";
+}, 100);
+
+window.SongLineTV = {state: () => ({code, room})};
+start().catch(e => { $('#setupMsg').textContent = 'Couldn\'t connect: ' + e.message; });
+})();
+</script>
+</body>
+</html>

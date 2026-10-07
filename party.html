@@ -8,6 +8,7 @@
 <title>SongLine Online</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="config.js"></script>
 <style>
 :root{--bg:#14111f;--panel:#1f1b2e;--line:#332d4a;--text:#f2effa;--muted:#a49cbd;--accent:#ff3d8b;--accent2:#22d3ee;--accent3:#7c3aed;--on-accent:#fff;--btn2:#2c2742;--field:#120f1c;--card:#2a2540;--hi:#3a1f35;--ok:#34d399;--bad:#f87171;--warn:#fbbf24}
 *{box-sizing:border-box}
@@ -226,17 +227,23 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
 .seg2 button.on{border-color:var(--accent);background:var(--hi)}
 .lbl{font-size:13px;color:var(--muted);margin-top:4px}
 .mini{background:none;border:1px solid var(--line);color:var(--text);border-radius:10px;height:40px;min-width:40px;cursor:pointer;font-size:16px}
+
+.psbox{border-top:1px solid var(--line);margin-top:12px;padding-top:10px}
+.cliptimer{text-align:center;font-weight:900;font-size:30px;color:var(--accent2);font-variant-numeric:tabular-nums;margin:2px 0 8px}
+.cliptimer.up{font-size:18px;color:var(--accent)}
+.clipinfo{text-align:center;font-size:12px;color:var(--muted);margin-bottom:8px}
 </style>
 </head>
 <body>
 <div class="app">
   <header>
-    <a class="logo" href="./">Song<span>Line</span></a><span class="pill">ONLINE</span><span class="muted" style="font-size:11px" title="All phones should show the same version">v14</span>
+    <a class="logo" href="./">Song<span>Line</span></a><span class="pill">ONLINE</span><span class="muted" style="font-size:11px" title="All phones should show the same version">v16</span>
     <nav>
       <button class="burger" id="menuBtn" aria-label="Menu" aria-expanded="false">☰</button>
       <div class="menu hidden" id="menu">
         <button class="mi hidden" id="histBtn"><span class="ic">📜</span>History</button>
         <button class="mi" id="themeBtn"><span class="ic">🎨</span>Look &amp; feel</button>
+        <button class="mi hidden" id="tvBtn"><span class="ic">📺</span>TV mode</button>
         <button class="mi" id="tourBtn"><span class="ic">❓</span>How to play</button>
         <a class="mi" href="./"><span class="ic">🏠</span>Main page</a>
         <hr class="hidden" id="leaveSep">
@@ -301,6 +308,17 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
       <div class="num"><span>Cards to win</span><div class="ctr"><button data-set="target" data-d="-1">−</button><b id="setTarget"></b><button data-set="target" data-d="1">+</button></div></div>
       <div class="num"><span>Starting tokens</span><div class="ctr"><button data-set="tokens" data-d="-1">−</button><b id="setTokens"></b><button data-set="tokens" data-d="1">+</button></div></div>
       <label class="muted row"><input type="checkbox" id="setShuffle" checked> Random turn order</label>
+      <div class="lbl" style="margin-top:12px;font-weight:700;color:var(--text)">🎵 Playback</div>
+      <div class="psbox">
+        <div class="lbl">Song starts at</div>
+        <div class="seg2" data-ps="playStart"><button data-v="0">0:00</button><button data-v="15">0:15</button><button data-v="30">0:30</button><button data-v="60">1:00</button><button data-v="rand">🎲 Random</button></div>
+        <div class="lbl">Clip length: <b class="psLenLbl"></b></div>
+        <input type="range" min="0" max="13" step="1" data-ps="playLen" style="width:100%;accent-color:var(--accent)">
+        <label class="muted row" style="margin:6px 0;flex-wrap:nowrap"><input type="checkbox" data-ps="shrink"> 📉 Gets shorter every round (challenge)</label>
+        <div class="lbl">Replays per song</div>
+        <div class="seg2" data-ps="replays"><button data-v="inf">Unlimited</button><button data-v="0">None</button><button data-v="1">1</button><button data-v="2">2</button></div>
+        <label class="muted row" style="margin:0;flex-wrap:nowrap"><input type="checkbox" data-ps="showTimer"> ⏱ Show the countdown on everyone's phone</label>
+      </div>
       <div class="srcbox">
         <b>Songs</b>
         <div class="seg">
@@ -322,6 +340,7 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
       <p class="muted">Everyone starts with one revealed card in their timeline. Players can still join after the game starts and get their starting card then.</p>
     </div>
     <p class="muted hidden" id="lobWait" style="text-align:center">Waiting for the host to start the game…</p>
+    <p class="clipinfo" id="lobClip"></p>
   </section>
 
   <!-- game -->
@@ -330,6 +349,8 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
     <div class="winner hidden" id="winner"></div>
     <div class="status" id="status"></div>
     <div class="sub" id="sub"></div>
+    <div class="cliptimer hidden" id="clipTimer"></div>
+    <div class="clipinfo" id="clipInfo"></div>
 
     <!-- host controls -->
     <div class="quick hidden" id="hostQuick"><button class="btn" id="quickBtn"></button></div>
@@ -358,6 +379,18 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
           <button class="btn ghost sm" id="skipBtn" title="Swap the song for free (e.g. it didn't play)">⤼ Different song</button>
         </div>
       </div>
+      <details style="margin-top:10px"><summary class="muted" style="cursor:pointer">🎵 Playback settings</summary>
+      <div class="psbox">
+        <div class="lbl">Song starts at</div>
+        <div class="seg2" data-ps="playStart"><button data-v="0">0:00</button><button data-v="15">0:15</button><button data-v="30">0:30</button><button data-v="60">1:00</button><button data-v="rand">🎲 Random</button></div>
+        <div class="lbl">Clip length: <b class="psLenLbl"></b></div>
+        <input type="range" min="0" max="13" step="1" data-ps="playLen" style="width:100%;accent-color:var(--accent)">
+        <label class="muted row" style="margin:6px 0;flex-wrap:nowrap"><input type="checkbox" data-ps="shrink"> 📉 Gets shorter every round (challenge)</label>
+        <div class="lbl">Replays per song</div>
+        <div class="seg2" data-ps="replays"><button data-v="inf">Unlimited</button><button data-v="0">None</button><button data-v="1">1</button><button data-v="2">2</button></div>
+        <label class="muted row" style="margin:0;flex-wrap:nowrap"><input type="checkbox" data-ps="showTimer"> ⏱ Show the countdown on everyone's phone</label>
+      </div>
+      </details>
       <div id="hostChallenge" class="hidden" style="margin-top:10px;text-align:center">
         <div class="muted" id="chList" style="margin-bottom:8px"></div>
         <button class="btn big" id="revealBtn">Reveal ▶</button>
@@ -467,6 +500,22 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
   </div>
 </div>
 
+<div class="modal hidden" id="tvModal">
+  <div class="modal-box" style="text-align:center">
+    <h2 style="margin:0 0 6px">📺 TV mode</h2>
+    <p class="muted" style="margin:0 0 10px">Show the scoreboard, the current player's cards, the countdown and big reveals on a TV or laptop. It's view-only, and the music still plays from the host's phone.</p>
+    <div style="text-align:left;font-size:15px;line-height:1.5">
+      <b>On a smart TV:</b> open its web browser, go to<br><code id="tvUrl" style="font-size:15px"></code><br>and enter the room code <b id="tvCode" style="color:var(--accent2);letter-spacing:2px"></b>.
+      <p class="muted" id="tvCfgNote" style="font-size:13px;margin:6px 0 0">For a TV to find your game by code, your Firebase settings must be in <code>config.js</code> (see the README). Laptops can use the button below without it.</p>
+    </div>
+    <div class="row" style="justify-content:center;margin-top:14px">
+      <a class="btn" id="tvOpen" target="_blank" rel="noopener" style="text-decoration:none">Open on this device</a>
+      <button class="btn ghost" id="tvCopy">Copy link</button>
+    </div>
+    <button class="btn ghost sm" style="margin-top:12px" data-close>Close</button>
+  </div>
+</div>
+
 <div class="modal hidden" id="cardModal">
   <div class="modal-box" id="cdBody"></div>
 </div>
@@ -502,7 +551,7 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
 'use strict';
 // Optional: paste your Firebase web config here instead of in the app, e.g.
 // const FIREBASE_CONFIG = { apiKey: "…", authDomain: "…", databaseURL: "…", projectId: "…", appId: "…" };
-const FIREBASE_CONFIG = null;
+const FIREBASE_CONFIG = window.SONGLINE_FIREBASE || null;   // set in config.js (optional)
 const FB_VER = '12.19.0';
 const FB = `https://www.gstatic.com/firebasejs/${FB_VER}/`;
 const API = 'https://api.spotify.com/v1';
@@ -697,8 +746,24 @@ $('#devRefresh').onclick = loadDevices;
 // playback, using the main page's Start and Play-for settings
 const DURS = [1, 2, 3, 4, 5, 7, 10, 15, 20, 30, 45, 60, 90, Infinity];
 let answer = store.json('party_answer', null), playing = false, playGen = 0, timer = null;
-function startPos(){ const s = store.get('start_at') || '0'; return s === 'rand' ? (20 + Math.floor(Math.random() * 40)) * 1000 : (+s) * 1000; }
-const limitMs = () => (DURS[+(store.get('play_for') ?? DURS.length - 1)] ?? Infinity) * 1000;
+const PS_DEF = {playStart: '0', playLen: 13, shrink: false, replays: 'inf', showTimer: true};
+const ps = () => ({...PS_DEF, ...(room?.settings || {})});
+function startPos(){ const s = String(ps().playStart); return s === 'rand' ? (20 + Math.floor(Math.random() * 40)) * 1000 : (+s || 0) * 1000; }
+function clipIndex(){
+  const S = ps(); let i = Math.min(13, Math.max(0, +S.playLen));
+  if (S.shrink && isFinite(DURS[i])){ const n = Math.max(1, order().length); i = Math.max(0, i - Math.floor(((room?.round?.n || 1) - 1) / n)); }
+  return i;
+}
+const limitMs = () => DURS[clipIndex()] * 1000;
+const fmtLen = i => !isFinite(DURS[i]) ? '∞ whole song' : DURS[i] < 60 ? DURS[i] + ' s' : (DURS[i] / 60) + ' min';
+const fmtStart = v => v === 'rand' ? 'a random point' : (+v ? `0:${String(+v % 60).padStart(2, '0')}`.replace(/^0:00$/, '1:00') : 'the start');
+function clipSummary(){
+  const S = ps(), i = clipIndex(), bits = [`starts at ${fmtStart(String(S.playStart))}`, fmtLen(i)];
+  if (S.shrink && isFinite(DURS[+S.playLen])) bits.push('📉 shrinking');
+  if (S.replays !== 'inf') bits.push(+S.replays ? `${S.replays} replay${+S.replays > 1 ? 's' : ''}` : 'no replays');
+  return '🎵 ' + bits.join(' · ');
+}
+let replaysUsed = 0, replayFor = null;
 function setEq(){ $('#eq').classList.toggle('paused', !playing); $('#pauseBtn').textContent = playing ? '⏸ Pause' : '▶ Play'; }
 async function playId(id){
   const gen = ++playGen; clearInterval(timer); $('#countdown').textContent = '';
@@ -712,11 +777,12 @@ async function playId(id){
       await sleep(200);
     }
     const end = Date.now() + lim;
+    if (ps().showTimer) fb.update(R(), {'round/until': end, 'round/clip': lim, 'round/timeup': null}).catch(() => {});
     timer = setInterval(async () => {
       if (gen !== playGen){ clearInterval(timer); return; }
       const left = end - Date.now();
       $('#countdown').textContent = left > 0 ? (left / 1000).toFixed(1) + ' s' : "⏱ time's up";
-      if (left <= 0){ clearInterval(timer); playing = false; setEq(); try { await sp('/me/player/pause' + devQ(), {method: 'PUT'}); } catch(e){} }
+      if (left <= 0){ clearInterval(timer); playing = false; setEq(); if (ps().showTimer) fb.set(R('round/timeup'), true).catch(() => {}); try { await sp('/me/player/pause' + devQ(), {method: 'PUT'}); } catch(e){} }
     }, 100);
   }
 }
@@ -727,7 +793,20 @@ $('#pauseBtn').onclick = async () => {
     else { await sp('/me/player/play' + devQ(), {method: 'PUT'}); playing = true; setEq(); }
   } catch(e){ msg(esc(e.message)); }
 };
-$('#replayBtn').onclick = () => answer && playId(answer.id).catch(e => msg(esc(e.message)));
+$('#replayBtn').onclick = () => {
+  if (!answer) return;
+  if (replayFor !== answer.id){ replayFor = answer.id; replaysUsed = 0; }
+  const lim = ps().replays;
+  if (lim !== 'inf' && replaysUsed >= +lim){ toast('No replays left for this song'); return; }
+  replaysUsed++; renderReplayBtn();
+  playId(answer.id).catch(e => msg(esc(e.message)));
+};
+function renderReplayBtn(){
+  const lim = ps().replays, used = answer && replayFor === answer.id ? replaysUsed : 0;
+  const left = lim === 'inf' ? null : Math.max(0, +lim - used);
+  $('#replayBtn').textContent = left == null ? '↺ Replay' : `↺ Replay (${left} left)`;
+  $('#replayBtn').disabled = left === 0;
+}
 
 // ================= QR scanning (host) =================
 let stream = null, scanT = null, detector = null;
@@ -785,7 +864,7 @@ $('#createBtn').onclick = async () => {
       try { await fb.set(R('host'), me); ok = true; } catch(e){ if (i === 5) throw e; }
     }
     const now = Date.now();
-    await fb.update(R(), {created: now, state: 'lobby', settings: {target: 10, tokens: 2, shuffle: true, welcome: store.get('party_welcome') || null}, [`players/${me}`]: {name: myName(), joined: now, online: true, color: themeNow().accent}});
+    await fb.update(R(), {created: now, state: 'lobby', settings: {target: 10, tokens: 2, shuffle: true, welcome: store.get('party_welcome') || null, playStart: store.get('start_at') || '0', playLen: +(store.get('play_for') ?? 13), shrink: false, replays: 'inf', showTimer: true}, [`players/${me}`]: {name: myName(), joined: now, online: true, color: themeNow().accent}});
     enterRoom(code);
   } catch(e){ msg('Couldn\'t create the room: ' + esc(e.message) + '. Check the database rules and that Anonymous sign-in is enabled (README).'); }
   $('#createBtn').disabled = false;
@@ -820,13 +899,13 @@ function enterRoom(c){
     if (room.players?.[me] && room.players[me].online === false) fb.set(R(`players/${me}/online`), true).catch(() => {});
     render();
   }, err => msg('Connection error: ' + esc(err.message)));
-  $('#histBtn').classList.remove('hidden'); $('#leaveBtn').classList.remove('hidden'); $('#leaveSep').classList.remove('hidden');
+  $('#histBtn').classList.remove('hidden'); $('#leaveBtn').classList.remove('hidden'); $('#leaveSep').classList.remove('hidden'); $('#tvBtn').classList.remove('hidden');
   if (!store.get('tour_v1')) setTimeout(openTour, 400);
 }
 function leave(){
   if (unsub){ unsub(); unsub = null; }
   stopScan(); room = null; code = null; store.del('party_room');
-  $('#histBtn').classList.add('hidden'); $('#leaveBtn').classList.add('hidden'); $('#leaveSep').classList.add('hidden');
+  $('#histBtn').classList.add('hidden'); $('#leaveBtn').classList.add('hidden'); $('#leaveSep').classList.add('hidden'); $('#tvBtn').classList.add('hidden');
   history.replaceState(null, '', location.pathname); show('s-home');
 }
 $('#leaveBtn').onclick = async () => {
@@ -836,6 +915,17 @@ $('#leaveBtn').onclick = async () => {
   }
   await fb.set(R(`players/${me}/online`), false).catch(() => {}); leave();
 };
+
+// ================= TV mode =================
+function tvLink(withCfg = true){ return `${BASE}tv.html?room=${code}` + (withCfg ? shareCfg() : ''); }
+$('#tvBtn').onclick = () => {
+  $('#tvUrl').textContent = BASE.replace(/^https?:\/\//, '') + 'tv.html';
+  $('#tvCode').textContent = code;
+  $('#tvOpen').href = tvLink();
+  $('#tvCfgNote').classList.toggle('hidden', !!FIREBASE_CONFIG);
+  $('#tvModal').classList.remove('hidden');
+};
+$('#tvCopy').onclick = async () => { try { await navigator.clipboard.writeText(tvLink()); toast('TV link copied'); } catch(e){ prompt('Copy this link:', tvLink()); } };
 
 // ================= how-to-play tour =================
 const TOUR = [
@@ -859,6 +949,41 @@ $('#tourSkip').onclick = closeTour;
 $('#tourBack').onclick = () => { tourI = Math.max(0, tourI - 1); renderTour(); };
 $('#tourNext').onclick = () => { if (tourI < TOUR.length - 1){ tourI++; renderTour(); } else closeTour(); };
 
+// ================= playback settings (host) =================
+function renderPS(){
+  const S = ps(), host = isHost();
+  $$('.psbox').forEach(box => {
+    box.querySelectorAll('[data-ps]').forEach(el => {
+      const k = el.dataset.ps;
+      if (el.classList.contains('seg2')) el.querySelectorAll('[data-v]').forEach(b => { b.classList.toggle('on', String(S[k]) === b.dataset.v); b.disabled = !host; });
+      else if (el.type === 'checkbox'){ el.checked = !!S[k]; el.disabled = !host; }
+      else if (el.type === 'range'){ if (document.activeElement !== el) el.value = S[k]; el.disabled = !host; }
+    });
+    box.querySelectorAll('.psLenLbl').forEach(l => l.textContent = fmtLen(+S.playLen));
+  });
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('.psbox [data-v]'); if (!b || !isHost()) return;
+  const k = b.closest('[data-ps]').dataset.ps; fb.set(R('settings/' + k), b.dataset.v);
+});
+document.addEventListener('input', e => {
+  const el = e.target.closest('.psbox [data-ps]'); if (!el || !isHost()) return;
+  const k = el.dataset.ps;
+  if (el.type === 'range'){ el.closest('.psbox').querySelector('.psLenLbl').textContent = fmtLen(+el.value); fb.set(R('settings/' + k), +el.value); }
+  if (el.type === 'checkbox') fb.set(R('settings/' + k), el.checked);
+});
+// everyone: live clip countdown
+setInterval(() => {
+  const r = room?.round, el = $('#clipTimer');
+  if (!el) return;
+  const show = room?.state === 'game' && ps().showTimer && r && ['playing', 'challenge'].includes(r.state) && r.until;
+  el.classList.toggle('hidden', !show);
+  if (!show) return;
+  const left = r.until - Date.now();
+  el.classList.toggle('up', left <= 0 || !!r.timeup);
+  el.textContent = left > 0 && !r.timeup ? `⏱ ${(left / 1000).toFixed(left < 10000 ? 1 : 0)} s` : "⏱ Time's up! Place your card";
+}, 100);
+
 // ================= rendering =================
 let renderQueued = false, pendingRender = false, drag = null, animatedN = null, lastAlert = '';
 function render(){
@@ -873,6 +998,10 @@ function render(){
 }
 function renderNow(){
   if (!room) return;
+  renderPS();
+  $('#lobClip').textContent = clipSummary();
+  $('#clipInfo').textContent = room.state === 'game' ? clipSummary() : '';
+  if (isHost()) renderReplayBtn();
   if (room.state === 'lobby') renderLobby(); else renderGame();
   if (!$('#histModal').classList.contains('hidden')) renderHist();
 }
