@@ -1142,20 +1142,27 @@ function cleanTitle(s){
           .trim();
 }
 async function mbYear(t){
-  const title = cleanTitle(t.title);
-  const q = `recording:"${title.replace(/"/g, '')}" AND artist:"${t.firstArtist.replace(/"/g, '')}"`;
-  const r = await fetch('https://musicbrainz.org/ws/2/recording?fmt=json&limit=40&query=' + encodeURIComponent(q));
-  if (r.status === 503){ await sleep(2000); return mbYear(t); }
-  if (!r.ok) return null;
-  const d = await r.json();
-  const nt = norm(title);
-  let best = null;
-  for (const rec of d.recordings || []){
-    if ((rec.score ?? 0) < 85 || norm(rec.title) !== nt) continue;
-    const y = (rec['first-release-date'] || '').slice(0, 4);
-    if (/^\d{4}$/.test(y) && (!best || y < best)) best = y;
+  // same matching as the online song list: title + artist first, then title only with an artist check
+  const title = cleanTitle(t.title) || t.title, artist = String(t.firstArtist || t.artist || '').split(',')[0].trim(), want = norm(title), wantA = norm(artist);
+  const qs = [`recording:"${title.replace(/"/g, '')}" AND artist:"${artist.replace(/"/g, '')}"`, `recording:"${title.replace(/"/g, '')}"`];
+  for (const q of qs){
+    let r;
+    for (let tries = 0; tries < 3; tries++){ r = await fetch('https://musicbrainz.org/ws/2/recording?fmt=json&limit=50&query=' + encodeURIComponent(q)); if (r.status !== 503) break; await sleep(2000); }
+    if (!r.ok) continue;
+    const d = await r.json();
+    let best = null;
+    for (const rec of d.recordings || []){
+      if ((rec.score ?? 0) < 80) continue;
+      const nt = norm(rec.title);
+      if (nt !== want && !nt.startsWith(want + ' ')) continue;
+      if (q === qs[1]){ const names = (rec['artist-credit'] || []).flatMap(a => [a.name, a.artist?.name, a.artist?.['sort-name']]).map(norm); if (!names.some(n => n && wantA && (n.includes(wantA) || wantA.includes(n)))) continue; }
+      const y = (rec['first-release-date'] || '').slice(0, 4);
+      if (/^\d{4}$/.test(y) && (!best || y < best)) best = y;
+    }
+    if (best) return best;
+    await sleep(1100);
   }
-  return best;
+  return null;
 }
 $('#mbBtn').onclick = async () => {
   if (mbRunning){ mbRunning = false; return; }

@@ -115,6 +115,10 @@ code{background:var(--field);padding:2px 6px;border-radius:6px;font-size:13px;wo
 .linkbtn{background:none;border:0;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:13px;padding:0}
 .dk-tag{font-size:11px;border-radius:6px;padding:1px 6px;margin-left:6px;white-space:nowrap}
 .dk-dup{background:#3a2a0d;color:#ffd98a}.dk-played{background:#0f2e22;color:#86efac}
+.dk-y{width:64px;background:var(--field);border:1px solid var(--line);color:var(--accent2);font-weight:800;border-radius:8px;padding:4px 6px;font:inherit;font-weight:800}
+.dk-y.edited{border-color:var(--warn);color:var(--warn)}
+.dk-sug{display:block;margin-top:4px;background:none;border:1px dashed var(--warn);color:var(--warn);border-radius:6px;font-size:11px;padding:1px 6px;cursor:pointer;white-space:nowrap}
+.dk-mb{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 0;margin-bottom:8px}
 .dk-x{background:none;border:0;color:var(--muted);font-size:18px;cursor:pointer;margin-left:auto}
 .hist li.isdup{background:rgba(251,191,36,.07)}
 .hist .who{margin-left:auto;text-align:right;font-weight:700;white-space:nowrap}
@@ -237,7 +241,7 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
 <body>
 <div class="app">
   <header>
-    <a class="logo" href="./">Song<span>Line</span></a><span class="pill">ONLINE</span><span class="muted" style="font-size:11px" title="All phones should show the same version">v18</span>
+    <a class="logo" href="./">Song<span>Line</span></a><span class="pill">ONLINE</span><span class="muted" style="font-size:11px" title="All phones should show the same version">v19</span>
     <nav>
       <button class="burger" id="menuBtn" aria-label="Menu" aria-expanded="false">☰</button>
       <div class="menu hidden" id="menu">
@@ -473,6 +477,14 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
     <div class="row" style="margin-bottom:8px">
       <input class="inp" id="dkSearch" placeholder="Search title or artist" dir="auto" style="flex:1;min-width:150px">
       <select class="inp" id="dkSort" style="width:auto"><option value="artist">Artist A–Z</option><option value="title">Title A–Z</option><option value="year">Year</option></select>
+    </div>
+    <div class="dk-mb">
+      <div class="row">
+        <button class="btn secondary sm" id="dkMb">🔎 Find original years</button>
+        <button class="btn sm hidden" id="dkMbApply"></button>
+        <span class="muted" id="dkMbState" style="font-size:13px"></span>
+      </div>
+      <p class="muted" style="font-size:12px;margin:6px 0 0">Spotify often shows the year of a remaster or compilation. This checks MusicBrainz (a free music database) for the first release of each song, newest years first. Tap a year to edit it yourself.</p>
     </div>
     <div class="row" style="margin-bottom:8px;justify-content:space-between">
       <label class="muted row"><input type="checkbox" id="dkDupOnly"> Only possible duplicates</label>
@@ -1499,14 +1511,86 @@ function renderDeckView(){
   list.sort(only ? (a, b) => dupKey(a).localeCompare(dupKey(b)) || (+yr(a) - +yr(b)) : cmp);
   $('#dkSub').textContent = `${deck.length} songs · ${extra ? extra + ' possible duplicate' + (extra > 1 ? 's' : '') : 'no duplicates found'}` + (used.size ? ` · ${deck.filter(t => used.has(t.id)).length} played` : '');
   $('#dkRemoveDups').classList.toggle('hidden', !extra);
-  $('#dkList').innerHTML = list.map(t => `<li class="${dupIds.has(t.id) ? 'isdup' : ''}"><span class="y">${esc(yr(t))}</span><span dir="auto"><b>${esc(t.n)}</b>${dupIds.has(t.id) ? '<span class="dk-tag dk-dup">duplicate?</span>' : ''}${used.has(t.id) ? '<span class="dk-tag dk-played">played</span>' : ''}<br><span class="muted">${esc(t.a)}</span></span><button class="dk-x" data-dkrm="${esc(t.id)}" title="Remove from the list">×</button></li>`).join('') || '<li class="muted">No songs match.</li>';
+  const sugN = deck.filter(t => mbSug(t)).length;
+  $('#dkMbApply').classList.toggle('hidden', !sugN || mbRun);
+  $('#dkMbApply').textContent = `Apply ${sugN} suggestion${sugN === 1 ? '' : 's'}`;
+  $('#dkList').innerHTML = list.map(t => `<li class="${dupIds.has(t.id) ? 'isdup' : ''}"><span class="y"><input class="dk-y ${over[t.id] ? 'edited' : ''}" data-dky="${esc(t.id)}" value="${esc(yr(t))}" inputmode="numeric" maxlength="4" title="Edit the year">${mbSug(t) ? `<button class="dk-sug" data-dksug="${esc(t.id)}" title="First release found on MusicBrainz">use ${esc(mbSug(t))}</button>` : ''}</span><span dir="auto"><b>${esc(t.n)}</b>${dupIds.has(t.id) ? '<span class="dk-tag dk-dup">duplicate?</span>' : ''}${used.has(t.id) ? '<span class="dk-tag dk-played">played</span>' : ''}<br><span class="muted">${esc(t.a)}</span></span><button class="dk-x" data-dkrm="${esc(t.id)}" title="Remove from the list">×</button></li>`).join('') || '<li class="muted">No songs match.</li>';
 }
+// ---- year editing + MusicBrainz lookups (results are shared with the main page via year_overrides) ----
+function setDeckYear(id, y){
+  const t = deck.find(x => x.id === id); if (!t) return;
+  const o = store.json('year_overrides', {});
+  y = String(y || '').trim();
+  if (!/^\d{4}$/.test(y) || y === String(t.y)) delete o[id]; else o[id] = y;
+  store.set('year_overrides', JSON.stringify(o));
+}
+const mbCache = () => store.json('mb_years', {});
+function mbSug(t){
+  const y = mbCache()[t.id], cur = (store.json('year_overrides', {})[t.id]) || t.y;
+  return y && /^\d{4}$/.test(y) && +y < +cur ? y : null;
+}
+let mbRun = false;
+async function mbLookup(t){
+  const title = cleanTitle(t.n) || t.n, artist = String(t.a || '').split(',')[0].trim(), want = norm(title), wantA = norm(artist);
+  const q1 = `recording:"${title.replace(/"/g, '')}" AND artist:"${artist.replace(/"/g, '')}"`;
+  const q2 = `recording:"${title.replace(/"/g, '')}"`;
+  for (const q of [q1, q2]){
+    let r;
+    for (let tries = 0; tries < 3; tries++){
+      r = await fetch('https://musicbrainz.org/ws/2/recording?fmt=json&limit=50&query=' + encodeURIComponent(q));
+      if (r.status !== 503) break;
+      await sleep(2000);
+    }
+    if (!r.ok) continue;
+    const d = await r.json();
+    let best = null;
+    for (const rec of d.recordings || []){
+      if ((rec.score ?? 0) < 80) continue;
+      const nt = norm(rec.title);
+      if (nt !== want && !nt.startsWith(want + ' ')) continue;
+      if (q === q2){   // title-only search: the artist still has to match (name or sort name)
+        const names = (rec['artist-credit'] || []).flatMap(a => [a.name, a.artist?.name, a.artist?.['sort-name']]).map(norm);
+        if (!names.some(n => n && wantA && (n.includes(wantA) || wantA.includes(n)))) continue;
+      }
+      const y = (rec['first-release-date'] || '').slice(0, 4);
+      if (/^\d{4}$/.test(y) && (!best || y < best)) best = y;
+    }
+    if (best) return best;
+    await sleep(1100);
+  }
+  return null;
+}
+$('#dkMb').onclick = async () => {
+  if (mbRun){ mbRun = false; return; }
+  mbRun = true; $('#dkMb').textContent = '⏹ Stop';
+  const over = store.json('year_overrides', {}), cache = mbCache();
+  const todo = deck.filter(t => !(t.id in cache)).sort((a, b) => +(over[b.id] || b.y) - +(over[a.id] || a.y));   // newest first: most likely remasters
+  let done = 0;
+  for (const t of todo){
+    if (!mbRun) break;
+    $('#dkMbState').textContent = `Checking ${++done}/${todo.length}: ${t.n}`;
+    let y = null; try { y = await mbLookup(t); } catch(e){}
+    const c = mbCache(); c[t.id] = y || ''; store.set('mb_years', JSON.stringify(c));
+    if (done % 5 === 0) renderDeckView();
+    await sleep(1100);                       // MusicBrainz allows about one request per second
+  }
+  mbRun = false; $('#dkMb').textContent = '🔎 Find original years';
+  const n = deck.filter(t => mbSug(t)).length;
+  $('#dkMbState').textContent = todo.length ? `Done. ${n} song${n === 1 ? '' : 's'} with an earlier original year (shown in yellow).` : `Already checked. ${n} suggestion${n === 1 ? '' : 's'}.`;
+  renderDeckView();
+};
+$('#dkMbApply').onclick = () => { deck.forEach(t => { const y = mbSug(t); if (y) setDeckYear(t.id, y); }); renderDeckView(); toast('Years updated'); };
+$('#dkList').addEventListener('change', e => { const id = e.target.dataset.dky; if (id){ setDeckYear(id, e.target.value); renderDeckView(); } });
+$('#dkList').addEventListener('keydown', e => { if (e.target.dataset.dky && e.key === 'Enter') e.target.blur(); });
 function saveDeck(){ store.set('party_deck', JSON.stringify(deck)); renderDeckView(); render(); if (deck.length) $('#deckState').textContent = `✓ ${deck.length} songs ready.`; }
 function openDeckView(){ if (!deck.length) return; $('#deckModal').classList.remove('hidden'); renderDeckView(); }
 $('#viewDeck').onclick = openDeckView; $('#viewDeck2').onclick = openDeckView;
 ['dkSearch', 'dkSort', 'dkDupOnly'].forEach(id => $('#' + id).addEventListener('input', renderDeckView));
 $('#dkDupOnly').addEventListener('change', renderDeckView);
-$('#dkList').onclick = e => { const id = e.target.dataset.dkrm; if (id){ deck = deck.filter(t => t.id !== id); saveDeck(); } };
+$('#dkList').onclick = e => {
+  const id = e.target.dataset.dkrm; if (id){ deck = deck.filter(t => t.id !== id); saveDeck(); return; }
+  const sg = e.target.dataset.dksug; if (sg){ setDeckYear(sg, mbCache()[sg]); renderDeckView(); }
+};
 $('#dkRemoveDups').onclick = () => {
   const over = store.json('year_overrides', {}), yr = t => over[t.id] || t.y, drop = new Set();
   dupGroups().forEach(g => { const keep = g.slice().sort((a, b) => (+yr(a) || 9999) - (+yr(b) || 9999))[0]; g.forEach(t => { if (t !== keep) drop.add(t.id); }); });
