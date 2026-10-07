@@ -63,6 +63,8 @@ td input.year{width:70px;background:var(--field);border:1px solid var(--line);co
 td input.year.changed{border-color:var(--warn);color:var(--warn)}
 .tbl-wrap{max-height:480px;overflow:auto}
 .x{background:none;border:0;color:var(--muted);cursor:pointer;font-size:18px}
+.keep{color:var(--muted);font-size:12px;cursor:pointer;margin-left:6px}
+.sugrow{white-space:nowrap}
 .sug{color:var(--warn);font-size:12px;cursor:pointer;text-decoration:underline}
 
 .modal{position:fixed;inset:0;background:rgba(10,8,18,.8);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
@@ -1058,7 +1060,7 @@ function renderTable(){
   const dupIds = new Set(dupGroups().flat().map(t => t.id));
   $('#tbody').innerHTML = tracks.map((t, i) => {
     const s = suggestions[t.id];
-    const sug = s && s !== yearOf(t) ? `<div class="sug" data-apply="${i}" title="First release found on ${esc(origSrc()[t.id] || 'MusicBrainz')}">use ${esc(s)}</div>` : '';
+    const sug = s && s !== yearOf(t) ? `<div class="sugrow"><span class="sug" data-apply="${i}" title="First release found on ${esc(origSrc()[t.id] || 'MusicBrainz')}">use ${esc(s)}</span> <span class="keep" data-keep="${i}" title="The current year is right: hide this suggestion">✓ keep</span></div>` : '';
     const tags = (dupIds.has(t.id) ? '<span class="tag dup">duplicate?</span>' : '') + (pr.has(t.id) ? '<span class="tag pr">printed</span>' : '');
     return `<tr class="${dupIds.has(t.id) ? 'isdup' : ''}"><td><input class="year ${over[t.id] ? 'changed' : ''}" data-i="${i}" value="${esc(yearOf(t))}" inputmode="numeric" maxlength="4">${sug}</td><td>${esc(t.title)}${tags}</td><td class="muted">${esc(t.artist)}</td><td><button class="x" data-rm="${i}" title="Remove">×</button></td></tr>`;
   }).join('');
@@ -1131,6 +1133,7 @@ function setYear(t, y){
 $('#tbody').addEventListener('change', e => { const i = e.target.dataset.i; if (i != null){ setYear(tracks[i], e.target.value.trim()); renderTable(); } });
 $('#tbody').addEventListener('click', e => {
   if (e.target.dataset.rm != null){ tracks.splice(+e.target.dataset.rm, 1); renderTable(); }
+  if (e.target.dataset.keep != null){ const t = tracks[+e.target.dataset.keep]; suggestions[t.id] = null; origSave(t.id, null); renderTable(); return; }
   if (e.target.dataset.apply != null){ const t = tracks[+e.target.dataset.apply]; setYear(t, suggestions[t.id]); renderTable(); }
 });
 $('#mbApply').onclick = () => { tracks.forEach(t => { if (suggestions[t.id]) setYear(t, suggestions[t.id]); }); renderTable(); };
