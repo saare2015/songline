@@ -110,6 +110,32 @@ body{font-size:1.15vw}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 .fsbtn{position:fixed;right:1.2vw;bottom:1.2vw;z-index:30;opacity:.7}
 .net{position:fixed;left:0;right:0;top:0;background:#b45309;color:#fff;text-align:center;font-weight:800;padding:.5vw;z-index:40;font-size:1.2vw}
+
+.swatches{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
+.sw{border:2px solid var(--line);border-radius:12px;padding:10px 6px;cursor:pointer;background:var(--field);color:var(--text);font:inherit;font-size:13px}
+.sw.on{border-color:var(--accent)}
+.sw i{display:inline-block;width:14px;height:14px;border-radius:50%;margin:0 1px;vertical-align:middle}
+.colrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0}
+.colrow input[type=color]{width:52px;height:36px;border:0;background:none;padding:0;cursor:pointer}
+.seg3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.seg3 button{border:2px solid var(--line);background:var(--field);color:var(--text);border-radius:10px;padding:8px 4px;font:inherit;font-size:13px;cursor:pointer}
+.seg3 button.on{border-color:var(--accent);background:var(--hi)}
+
+.modal{position:fixed;inset:0;background:rgba(8,6,14,.7);display:flex;align-items:center;justify-content:center;z-index:50;font-size:max(16px,1.05vw)}
+.modal-box{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:max(20px,1.4vw);max-width:max(420px,30vw);width:92vw}
+.modal .sw,.modal .seg3 button{font-size:max(13px,.95vw)}
+.modal .colrow input[type=color]{width:max(52px,3.4vw);height:max(36px,2.4vw)}
+.modal-box h2{font-size:22px}
+.modal .btn{font-size:15px;padding:10px 16px;border-radius:12px}
+.modal .btn.sm{font-size:13px;padding:8px 12px}
+.row{display:flex;gap:8px;align-items:center}
+.tvbtns{position:fixed;right:1.2vw;bottom:1.2vw;z-index:30;display:flex;gap:.6vw;transition:opacity .4s}
+.tvbtns.idle{opacity:0;pointer-events:none}
+body.light .card.wrong{background:#ffe4e6}
+body.light .reveal .fact{color:#3b3552;background:rgba(0,0,0,.05)}
+body.light .overlay{background:rgba(245,243,251,.9)}
+body.light .gap.bet{color:#155e75}
+body.light .card .nocv{background:#e2ddef}
 </style>
 </head>
 <body>
@@ -163,7 +189,22 @@ body{font-size:1.15vw}
 </div>
 
 <div id="overlay"></div>
-<button class="btn ghost fsbtn" id="fsBtn">⛶ Full screen</button>
+<div class="tvbtns" id="tvBtns"><button class="btn ghost" id="themeBtn">🎨 Colors</button><button class="btn ghost" id="fsBtn">⛶ Full screen</button></div>
+<div class="modal hidden" id="themeModal">
+  <div class="modal-box">
+    <h2 style="margin:0 0 4px">🎨 Colors</h2>
+    <p class="muted" style="margin:0 0 8px">Only changes this browser. The main page, online page and TV view on this device share these colors.</p>
+    <div class="seg3"><button data-mode="dark">🌙 Dark</button><button data-mode="black">⚫ Black</button><button data-mode="light">☀ Light</button></div>
+    <div class="swatches" id="swatches"></div>
+    <div class="colrow"><span>Main color</span><input type="color" id="cAccent"></div>
+    <div class="colrow"><span>Second color</span><input type="color" id="cAccent2"></div>
+    <div class="row" style="margin-top:12px;justify-content:space-between">
+      <button class="btn ghost sm" id="themeReset">Reset</button>
+      <button class="btn" data-tclose>Done</button>
+    </div>
+  </div>
+</div>
+
 <div class="net hidden" id="net">📡 Connection lost. Reconnecting…</div>
 
 <script>
@@ -186,13 +227,56 @@ const norm = s => String(s || '').toLowerCase().normalize('NFKD').replace(/[̀-�
 const cleanTitle = s => String(s || '').replace(/\s+-\s+.*$/, '').replace(/\s*[\(\[][^\)\]]*(remaster|version|edit|mix|mono|stereo|live|feat|deluxe|anniversary)[^\)\]]*[\)\]]/ig, '').trim();
 const DURS = [1, 2, 3, 4, 5, 7, 10, 15, 20, 30, 45, 60, 90, Infinity];
 
-// ---------- colors: same theme as this browser's online page, if any ----------
-(() => {
-  const T = {neon: ['#ff3d8b', '#22d3ee', '#7c3aed'], ocean: ['#3b82f6', '#2dd4bf', '#1d4ed8'], forest: ['#22c55e', '#facc15', '#15803d'],
-             sunset: ['#f97316', '#fbbf24', '#e11d48'], grape: ['#a855f7', '#f472b6', '#6d28d9'], mono: ['#e5e7eb', '#9ca3af', '#4b5563']};
-  const t = store.json('ui_theme', {}), b = T[t.preset] || T.neon, r = document.documentElement.style;
-  r.setProperty('--accent', t.accent || b[0]); r.setProperty('--accent2', t.accent2 || b[1]); r.setProperty('--accent3', b[2]);
-})();
+
+// ---------- colors (🎨): shared by the main page, the online page and the TV on this browser ----------
+const THEMES = {
+  neon:   {name: 'Neon',   accent: '#ff3d8b', accent2: '#22d3ee', accent3: '#7c3aed', bg: '#14111f', panel: '#1f1b2e', line: '#332d4a'},
+  ocean:  {name: 'Ocean',  accent: '#3b82f6', accent2: '#2dd4bf', accent3: '#1d4ed8', bg: '#0b1420', panel: '#13212f', line: '#233648'},
+  forest: {name: 'Forest', accent: '#22c55e', accent2: '#facc15', accent3: '#15803d', bg: '#0f1712', panel: '#17231b', line: '#2a3b2f'},
+  sunset: {name: 'Sunset', accent: '#f97316', accent2: '#fbbf24', accent3: '#e11d48', bg: '#1a1210', panel: '#261a16', line: '#3d2b24'},
+  grape:  {name: 'Grape',  accent: '#a855f7', accent2: '#f472b6', accent3: '#6d28d9', bg: '#150f1f', panel: '#211830', line: '#372a4d'},
+  mono:   {name: 'Mono',   accent: '#e5e7eb', accent2: '#9ca3af', accent3: '#4b5563', bg: '#111111', panel: '#1b1b1b', line: '#333333'}
+};
+const hex2rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const mix = (a, b, t) => '#' + hex2rgb(a).map((v, i) => Math.round(v + (hex2rgb(b)[i] - v) * t).toString(16).padStart(2, '0')).join('');
+const lumOf = h => { const c = hex2rgb(h).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; };
+function themeNow(){ const t = store.json('ui_theme', {}); return {...THEMES[t.preset] || THEMES.neon, ...(t.accent ? {accent: t.accent} : {}), ...(t.accent2 ? {accent2: t.accent2} : {}), preset: t.preset || 'neon', mode: ['light', 'black'].includes(t.mode) ? t.mode : 'dark'}; }
+function applyTheme(){
+  const t = themeNow(), r = document.documentElement.style, light = t.mode === 'light';
+  if (light){
+    t.bg = '#f5f3fb'; t.panel = '#ffffff'; t.line = '#e2ddef';
+    if (lumOf(t.accent) > .6) t.accent = '#374151';
+    if (lumOf(t.accent2) > .6) t.accent2 = mix(t.accent2, '#000000', .45);
+  } else if (t.mode === 'black'){ t.bg = '#000000'; t.panel = mix('#000000', t.panel, .7); }
+  document.body.classList.toggle('light', light);
+  const set = (k, v) => r.setProperty(k, v);
+  set('--accent', t.accent); set('--accent2', t.accent2); set('--accent3', t.accent3);
+  set('--bg', t.bg); set('--panel', t.panel); set('--line', t.line);
+  set('--btn2', light ? '#ece9f6' : mix(t.panel, t.line, .55)); set('--field', light ? '#f1eef9' : mix(t.bg, '#000000', .25));
+  set('--card', light ? '#f3f0fb' : mix(t.panel, t.line, .45)); set('--hi', mix(t.panel, t.accent, light ? .14 : .22));
+  set('--text', light ? '#1d1830' : '#f2effa'); set('--muted', light ? '#6b6485' : '#a49cbd');
+  set('--on-accent', lumOf(t.accent) > .45 ? '#111111' : '#ffffff');
+  document.querySelector('meta[name=theme-color]')?.setAttribute('content', t.bg);
+  return t;
+}
+function renderThemePicker(){
+  const t = themeNow();
+  document.querySelector('#swatches').innerHTML = Object.entries(THEMES).map(([k, v]) => `<button class="sw ${t.preset === k ? 'on' : ''}" data-theme="${k}"><i style="background:${v.accent}"></i><i style="background:${v.accent2}"></i><br>${v.name}</button>`).join('');
+  document.querySelector('#cAccent').value = t.accent; document.querySelector('#cAccent2').value = t.accent2;
+  document.querySelectorAll('#themeModal [data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode === t.mode));
+}
+function setTheme(patch){ store.set('ui_theme', JSON.stringify({...store.json('ui_theme', {}), ...patch})); applyTheme(); renderThemePicker(); }
+document.querySelector('#themeModal').addEventListener('click', e => {
+  const sw = e.target.closest('[data-theme]'); if (sw) return setTheme({preset: sw.dataset.theme, accent: null, accent2: null});
+  const m = e.target.closest('[data-mode]'); if (m) return setTheme({mode: m.dataset.mode});
+  if (e.target.closest('#themeReset')){ store.set('ui_theme', '{}'); applyTheme(); renderThemePicker(); }
+  if (e.target.closest('[data-tclose]') || e.target.id === 'themeModal') document.querySelector('#themeModal').classList.add('hidden');
+});
+document.querySelector('#cAccent').addEventListener('input', e => setTheme({accent: e.target.value}));
+document.querySelector('#cAccent2').addEventListener('input', e => setTheme({accent2: e.target.value}));
+function openThemes(){ renderThemePicker(); document.querySelector('#themeModal').classList.remove('hidden'); }
+applyTheme();
+$('#themeBtn').onclick = openThemes;
 
 // ---------- config ----------
 function getConfig(){
@@ -271,6 +355,11 @@ $('#goBtn').onclick = () => watch($('#codeIn').value);
 $('#codeIn').onkeydown = e => { if (e.key === 'Enter') watch($('#codeIn').value); };
 $('#fsBtn').onclick = () => { (document.documentElement.requestFullscreen?.() || Promise.resolve()).catch(() => {}); };
 document.addEventListener('fullscreenchange', () => $('#fsBtn').classList.toggle('hidden', !!document.fullscreenElement));
+// the buttons fade away when the mouse/remote is idle, so they don't sit on the TV picture
+let idleT = null;
+function wakeButtons(){ $('#tvBtns').classList.remove('idle'); clearTimeout(idleT); idleT = setTimeout(() => { if ($('#themeModal').classList.contains('hidden')) $('#tvBtns').classList.add('idle'); }, 5000); }
+['mousemove', 'keydown', 'touchstart', 'click'].forEach(ev => document.addEventListener(ev, wakeButtons));
+wakeButtons();
 let wake = null;
 async function keepAwake(){ try { if ('wakeLock' in navigator && document.visibilityState === 'visible') wake = await navigator.wakeLock.request('screen'); } catch(e){} }
 document.addEventListener('visibilitychange', keepAwake); keepAwake();

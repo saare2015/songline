@@ -237,7 +237,7 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
 <body>
 <div class="app">
   <header>
-    <a class="logo" href="./">Song<span>Line</span></a><span class="pill">ONLINE</span><span class="muted" style="font-size:11px" title="All phones should show the same version">v17</span>
+    <a class="logo" href="./">Song<span>Line</span></a><span class="pill">ONLINE</span><span class="muted" style="font-size:11px" title="All phones should show the same version">v18</span>
     <nav>
       <button class="burger" id="menuBtn" aria-label="Menu" aria-expanded="false">☰</button>
       <div class="menu hidden" id="menu">
@@ -488,7 +488,7 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
     <h2 style="margin:0 0 4px">🎨 Look &amp; feel</h2>
     <p class="muted" style="margin:0 0 8px">Only changes this phone. Your main color also marks your name on everyone's scoreboard.</p>
     <div class="lbl">Mode</div>
-    <div class="seg2" data-pref="mode"><button data-v="dark">🌙 Dark</button><button data-v="light">☀ Light</button></div>
+    <div class="seg2" data-pref="mode"><button data-v="dark">🌙 Dark</button><button data-v="black">⚫ Black</button><button data-v="light">☀ Light</button></div>
     <div class="lbl">Colors</div>
     <div class="swatches" id="swatches"></div>
     <div class="colrow"><span>Main color</span><input type="color" id="cAccent"></div>
@@ -604,7 +604,7 @@ const THEMES = {
 const hex2rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
 const mix = (a, b, t) => '#' + hex2rgb(a).map((v, i) => Math.round(v + (hex2rgb(b)[i] - v) * t).toString(16).padStart(2, '0')).join('');
 const lumOf = h => { const c = hex2rgb(h).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; };
-function themeNow(){ const t = store.json('ui_theme', {}); return {...THEMES[t.preset] || THEMES.neon, ...(t.accent ? {accent: t.accent} : {}), ...(t.accent2 ? {accent2: t.accent2} : {}), preset: t.preset || 'neon', mode: t.mode === 'light' ? 'light' : 'dark'}; }
+function themeNow(){ const t = store.json('ui_theme', {}); return {...THEMES[t.preset] || THEMES.neon, ...(t.accent ? {accent: t.accent} : {}), ...(t.accent2 ? {accent2: t.accent2} : {}), preset: t.preset || 'neon', mode: ['light', 'black'].includes(t.mode) ? t.mode : 'dark'}; }
 const PREF_DEF = {layout: 'list', art: 'covers', size: '1', anim: 'on', alerts: 'on'};
 const prefs = () => ({...PREF_DEF, ...store.json('ui_prefs', {})});
 function applyPrefs(){ const p = prefs(); document.body.style.zoom = p.size; document.body.classList.toggle('anim', p.anim === 'on'); }
@@ -615,7 +615,7 @@ function applyTheme(){
     t.bg = '#f5f3fb'; t.panel = '#ffffff'; t.line = '#e2ddef';
     if (lumOf(t.accent) > .6) t.accent = '#374151';          // very light accents vanish on white
     if (lumOf(t.accent2) > .6) t.accent2 = mix(t.accent2, '#000000', .45);
-  }
+  } else if (t.mode === 'black'){ t.bg = '#000000'; t.panel = mix('#000000', t.panel, .7); }
   document.body.classList.toggle('light', light);
   r.setProperty('--accent', t.accent); r.setProperty('--accent2', t.accent2); r.setProperty('--accent3', t.accent3);
   r.setProperty('--bg', t.bg); r.setProperty('--panel', t.panel); r.setProperty('--line', t.line);
