@@ -201,6 +201,22 @@ function getConfig(){
   if (p){ try { const c = JSON.parse(b64d(p)); if (c.apiKey){ store.set('fb_config', JSON.stringify(c)); return c; } } catch(e){} }
   return store.json('fb_config', null);
 }
+
+// config.js may have a copy-paste slip (e.g. "window.SONGLINE_FIREBASE = const firebaseConfig = {").
+// The browser then ignores it, so read it as text and pull the values out ourselves.
+async function loadConfigFile(){
+  try {
+    const t = await (await fetch('config.js', {cache: 'no-store'})).text();
+    const body = t.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n');
+    const cfg = {};
+    for (const m of body.matchAll(/["']?(\w+)["']?\s*:\s*["']([^"']+)["']/g)) cfg[m[1]] = m[2];
+    if (!cfg.apiKey || !cfg.projectId || /…|\.\.\./.test(cfg.apiKey)) return null;
+    if (!cfg.databaseURL) cfg.databaseURL = `https://${cfg.projectId}-default-rtdb.firebaseio.com`;
+    window.SONGLINE_FIREBASE = cfg;
+    return cfg;
+  } catch(e){ return null; }
+}
+
 let fb, db, code = null, room = null, unsub = null;
 const R = p => fb.ref(db, `rooms/${code}` + (p ? '/' + p : ''));
 const arr = v => Array.isArray(v) ? v.filter(Boolean) : v ? Object.values(v) : [];
@@ -224,6 +240,7 @@ function joinLink(){
 }
 
 async function start(){
+  if (!window.SONGLINE_FIREBASE && !new URLSearchParams(location.search).get('cfg')) await loadConfigFile();
   const cfg = getConfig();
   if (!cfg){
     $('#setupMsg').innerHTML = 'This TV doesn\'t know your Firebase project yet.<br>Either open the TV link from the host\'s phone (☰ → 📺 TV mode → "Open on this device"), or add your settings to <b>config.js</b> (see the README).';

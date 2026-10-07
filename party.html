@@ -237,12 +237,13 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
 <body>
 <div class="app">
   <header>
-    <a class="logo" href="./">Song<span>Line</span></a><span class="pill">ONLINE</span><span class="muted" style="font-size:11px" title="All phones should show the same version">v16</span>
+    <a class="logo" href="./">Song<span>Line</span></a><span class="pill">ONLINE</span><span class="muted" style="font-size:11px" title="All phones should show the same version">v17</span>
     <nav>
       <button class="burger" id="menuBtn" aria-label="Menu" aria-expanded="false">☰</button>
       <div class="menu hidden" id="menu">
         <button class="mi hidden" id="histBtn"><span class="ic">📜</span>History</button>
         <button class="mi" id="themeBtn"><span class="ic">🎨</span>Look &amp; feel</button>
+        <button class="mi hidden" id="shareBtn"><span class="ic">📤</span>Share join link</button>
         <button class="mi hidden" id="tvBtn"><span class="ic">📺</span>TV mode</button>
         <button class="mi" id="tourBtn"><span class="ic">❓</span>How to play</button>
         <a class="mi" href="./"><span class="ic">🏠</span>Main page</a>
@@ -255,6 +256,15 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
 
   <!-- one-time Firebase setup -->
   <section id="s-config" class="hidden">
+    <div class="panel">
+      <h2>🎮 Joining a game?</h2>
+      <p class="muted" style="margin-top:0">Scan the QR code on the host's phone, or paste the join link the host sent you.</p>
+      <div class="row">
+        <input class="inp" id="cfgJoin" placeholder="Paste the join link (or room code)" autocomplete="off" style="flex:1;min-width:200px">
+        <button class="btn" id="cfgJoinBtn">Join</button>
+      </div>
+      <p class="muted" style="margin-bottom:0">Host: in your game tap ☰ → <b>📤 Share join link</b> to send it to someone who can't scan the code.</p>
+    </div>
     <div class="panel">
       <h2>Connect your Firebase project</h2>
       <p class="muted">One-time setup on the host's device (see the README). In the Firebase console, open <b>Project settings → Your apps → Web app</b> and copy the <code>firebaseConfig</code> block. Paste it here.</p>
@@ -551,7 +561,7 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
 'use strict';
 // Optional: paste your Firebase web config here instead of in the app, e.g.
 // const FIREBASE_CONFIG = { apiKey: "…", authDomain: "…", databaseURL: "…", projectId: "…", appId: "…" };
-const FIREBASE_CONFIG = window.SONGLINE_FIREBASE || null;   // set in config.js (optional)
+let FIREBASE_CONFIG = window.SONGLINE_FIREBASE || null;   // set in config.js (optional)
 const FB_VER = '12.19.0';
 const FB = `https://www.gstatic.com/firebasejs/${FB_VER}/`;
 const API = 'https://api.spotify.com/v1';
@@ -678,11 +688,37 @@ function shareCfg(){
   const {apiKey, authDomain, databaseURL, projectId, appId} = getConfig();
   return '&cfg=' + b64e(JSON.stringify({apiKey, authDomain, databaseURL, projectId, appId}));
 }
+$('#cfgJoinBtn').onclick = () => {
+  const v = $('#cfgJoin').value.trim();
+  let room = null, cfg = null;
+  try { const u = new URL(v); room = u.searchParams.get('room'); cfg = u.searchParams.get('cfg'); } catch(e){}
+  if (!room && /^[A-Za-z0-9]{4}$/.test(v)) room = v.toUpperCase();
+  if (!room){ msg('That doesn\'t look like a join link or room code.'); return; }
+  if (!cfg && !getConfig()){ msg('A room code alone isn\'t enough on this phone yet. Ask the host for the join link or QR code (it carries the connection settings), or have them add their settings to config.js.'); return; }
+  location.href = location.pathname + '?room=' + encodeURIComponent(room.toUpperCase()) + (cfg ? '&cfg=' + encodeURIComponent(cfg) : '');
+};
+$('#cfgJoin').onkeydown = e => { if (e.key === 'Enter') $('#cfgJoinBtn').click(); };
 $('#cfgSave').onclick = () => {
   const c = parseConfig($('#cfgText').value);
   if (!c){ msg('Couldn\'t find apiKey and projectId in that text. Copy the whole firebaseConfig block.'); return; }
   store.set('fb_config', JSON.stringify(c)); location.reload();
 };
+
+
+// config.js may have a copy-paste slip (e.g. "window.SONGLINE_FIREBASE = const firebaseConfig = {").
+// The browser then ignores it, so read it as text and pull the values out ourselves.
+async function loadConfigFile(){
+  try {
+    const t = await (await fetch('config.js', {cache: 'no-store'})).text();
+    const body = t.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n');
+    const cfg = {};
+    for (const m of body.matchAll(/["']?(\w+)["']?\s*:\s*["']([^"']+)["']/g)) cfg[m[1]] = m[2];
+    if (!cfg.apiKey || !cfg.projectId || /…|\.\.\./.test(cfg.apiKey)) return null;
+    if (!cfg.databaseURL) cfg.databaseURL = `https://${cfg.projectId}-default-rtdb.firebaseio.com`;
+    window.SONGLINE_FIREBASE = cfg;
+    return cfg;
+  } catch(e){ return null; }
+}
 
 // ================= Firebase =================
 let fb = null, db = null, me = null;
@@ -899,13 +935,13 @@ function enterRoom(c){
     if (room.players?.[me] && room.players[me].online === false) fb.set(R(`players/${me}/online`), true).catch(() => {});
     render();
   }, err => msg('Connection error: ' + esc(err.message)));
-  $('#histBtn').classList.remove('hidden'); $('#leaveBtn').classList.remove('hidden'); $('#leaveSep').classList.remove('hidden'); $('#tvBtn').classList.remove('hidden');
+  $('#histBtn').classList.remove('hidden'); $('#leaveBtn').classList.remove('hidden'); $('#leaveSep').classList.remove('hidden'); $('#tvBtn').classList.remove('hidden'); $('#shareBtn').classList.remove('hidden');
   if (!store.get('tour_v1')) setTimeout(openTour, 400);
 }
 function leave(){
   if (unsub){ unsub(); unsub = null; }
   stopScan(); room = null; code = null; store.del('party_room');
-  $('#histBtn').classList.add('hidden'); $('#leaveBtn').classList.add('hidden'); $('#leaveSep').classList.add('hidden'); $('#tvBtn').classList.add('hidden');
+  $('#histBtn').classList.add('hidden'); $('#leaveBtn').classList.add('hidden'); $('#leaveSep').classList.add('hidden'); $('#tvBtn').classList.add('hidden'); $('#shareBtn').classList.add('hidden');
   history.replaceState(null, '', location.pathname); show('s-home');
 }
 $('#leaveBtn').onclick = async () => {
@@ -914,6 +950,14 @@ $('#leaveBtn').onclick = async () => {
     await pauseMusic(); await fb.remove(R()).catch(() => {}); leave(); return;
   }
   await fb.set(R(`players/${me}/online`), false).catch(() => {}); leave();
+};
+
+// ================= share join link =================
+$('#shareBtn').onclick = async () => {
+  const link = `${BASE}party.html?room=${code}${shareCfg()}`;
+  const text = `Join my SongLine game! Room ${code}`;
+  try { if (navigator.share){ await navigator.share({title: 'SongLine', text, url: link}); return; } } catch(e){ if (e.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(link); toast('Join link copied'); } catch(e){ prompt('Copy this join link:', link); }
 };
 
 // ================= TV mode =================
@@ -1685,6 +1729,7 @@ document.addEventListener('click', () => { if (!wake) keepAwake(); }, {once: tru
 
 // ================= boot =================
 (async () => {
+  if (!FIREBASE_CONFIG && !new URLSearchParams(location.search).get('cfg')){ const fc = await loadConfigFile(); if (fc) FIREBASE_CONFIG = fc; }
   const cfg = getConfig();
   if (!cfg){ show('s-config'); msg('This site isn\'t connected to Firebase yet. If you\'re a player, ask the host for the join QR code.', 'info'); return; }
   try { await initFirebase(cfg); }
