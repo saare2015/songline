@@ -92,6 +92,31 @@ body{font-size:1.15vw}
 .ov-row .mini img{width:2.6vw;height:2.6vw;border-radius:.3vw;object-fit:cover;vertical-align:middle;margin-inline-end:.3vw}
 
 /* reveal + winner overlays */
+/* bingo */
+.bgtop{display:grid;grid-template-columns:auto 1fr auto;gap:2vw;align-items:center;margin-bottom:1.4vw}
+.bcat{display:flex;align-items:center;gap:1vw;font-size:3vw;font-weight:900;padding:1.2vw 2.4vw;border-radius:1.4vw;background:var(--c,var(--panel));color:#14121c;box-shadow:0 1vw 3vw rgba(0,0,0,.35);transition:background .1s}
+.bcat.idle{background:var(--panel);color:var(--text)}
+.btimer{position:relative;height:1.8vw;background:var(--panel);border-radius:99px;overflow:hidden;margin-top:.6vw}
+.btimer i{position:absolute;inset:0 auto 0 0;background:var(--accent);transition:width .25s linear}
+html[dir=rtl] .btimer i{inset:0 0 0 auto}
+.btimer span{position:relative;display:block;text-align:center;font-weight:900;font-size:1.1vw;line-height:1.8vw}
+.btimer.low i{background:var(--bad)}
+.bcards{flex:1;display:grid;gap:1.4vw;align-content:start;justify-content:center;overflow:hidden}
+.bpl{background:var(--panel);border:1px solid var(--line);border-radius:1.2vw;padding:1vw;border-top:.4vw solid var(--pc,var(--line))}
+.bpl.turn{box-shadow:0 0 0 .25vw var(--accent)}
+.bpl .nm{display:flex;align-items:center;gap:.6vw;font-weight:900;font-size:1.4vw;margin-bottom:.6vw}
+.bpl .nm .muted{margin-inline-start:auto;font-weight:700;font-size:1.1vw}
+.bpl .res{margin-top:.6vw;font-weight:800;font-size:1.2vw;text-align:center}
+.bpl .res.ok{color:var(--ok)}.bpl .res.bad{color:var(--bad)}
+.bgrid{display:grid;grid-template-columns:repeat(var(--n),1fr);gap:.35vw}
+.bcell{aspect-ratio:1;border-radius:.5vw;background:var(--c);display:flex;align-items:center;justify-content:center;position:relative;font-size:1.3vw}
+.bcell .ic{opacity:.7}
+.bcell.free{background:repeating-linear-gradient(45deg,rgba(255,255,255,.12) 0 .4vw,rgba(255,255,255,.04) .4vw .8vw)}
+.bcell.on:not(.free)::after{content:"✕";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:2.4vw;font-weight:900;color:#14121c;background:rgba(255,255,255,.45);border-radius:inherit}
+.blegend{display:flex;gap:1.4vw;justify-content:center;margin-top:1vw;font-size:1.1vw;color:var(--muted)}
+.bleg{display:inline-flex;align-items:center;gap:.4vw}.bleg i{width:1vw;height:1vw;border-radius:.2vw;background:var(--c)}
+.bchips{display:flex;flex-wrap:wrap;gap:.8vw;margin-top:1.4vw}
+.bchips span{background:var(--panel);border-radius:99px;padding:.3vw 1vw;font-size:1.4vw;font-weight:800}
 .overlay{position:fixed;inset:0;background:rgba(8,6,14,.82);display:flex;align-items:center;justify-content:center;z-index:20;animation:fade .3s}
 .reveal{display:grid;grid-template-columns:auto 1fr;gap:3vw;align-items:center;max-width:80vw;animation:pop .6s cubic-bezier(.2,.8,.3,1.2)}
 .reveal img,.reveal .nocv{width:28vw;height:28vw;border-radius:1.6vw;object-fit:cover;box-shadow:0 2vw 5vw rgba(0,0,0,.6);background:var(--line);display:flex;align-items:center;justify-content:center;font-size:10vw}
@@ -193,6 +218,20 @@ body.light .card .nocv{background:#e2ddef}
   <div class="timer hidden" id="timer"></div>
 </div>
 
+<div class="screen hidden" id="s-bingo">
+  <div class="top">
+    <div class="logo">Song<span>Line</span></div><span class="pill">TV</span><span class="pill">🎱 Bingo</span>
+    <div class="joinbox"><div><div class="muted" style="font-size:.9vw">Join</div><div class="code" id="bgCode"></div></div><div class="qr" id="bgQr"></div></div>
+  </div>
+  <div class="bgtop">
+    <div class="bcat idle" id="tbCat"></div>
+    <div><div class="status" id="tbStatus" dir="auto"></div><div class="sub" id="tbSub" dir="auto" style="margin-bottom:0"></div><div class="btimer hidden" id="tbTimer"><i></i><span></span></div></div>
+    <div></div>
+  </div>
+  <div class="bcards" id="tbCards"></div>
+  <div class="blegend" id="tbLegend"></div>
+</div>
+
 <div id="overlay"></div>
 <div class="tvbtns" id="tvBtns"><button class="btn ghost" id="themeBtn">🎨 Colors</button><button class="btn ghost" id="fsBtn">⛶ Full screen</button><button class="btn ghost" id="langBtn" data-notr>🌐 <span id="langLbl">עברית</span></button></div>
 <div class="modal hidden" id="themeModal">
@@ -219,6 +258,59 @@ const FB = 'https://www.gstatic.com/firebasejs/12.19.0/';
 const BASE = location.origin + location.pathname.replace(/[^/]*$/, '');
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// ================= bingo mode: shared rules (phone + TV) =================
+// Two category sets. Every square on a bingo card has one category colour; answer that category right and you cross off a square of that colour.
+const BCATS = {
+  A: [
+    {k: 'artist',  ic: '🎤', name: 'Artist',       hint: 'Name the singer or band'},
+    {k: 'pre2000', ic: '⏳', name: 'Before 2000?', hint: 'Was it released before 2000?'},
+    {k: 'pm4',     ic: '↔', name: '±4 years',      hint: 'Guess the year. Within 4 years counts.', tol: 4},
+    {k: 'decade',  ic: '📅', name: 'Decade',        hint: 'Which decade is it from?'},
+    {k: 'pm2',     ic: '🎯', name: '±2 years',      hint: 'Guess the year. Within 2 years counts.', tol: 2},
+  ],
+  B: [
+    {k: 'title',   ic: '🏷', name: 'Song title',    hint: 'Name the song'},
+    {k: 'exact',   ic: '💯', name: 'Exact year',    hint: 'Guess the exact year'},
+    {k: 'artist',  ic: '🎤', name: 'Artist',       hint: 'Name the singer or band'},
+    {k: 'decade',  ic: '📅', name: 'Decade',        hint: 'Which decade is it from?'},
+    {k: 'pm3',     ic: '🎯', name: '±3 years',      hint: 'Guess the year. Within 3 years counts.', tol: 3},
+  ],
+};
+const BCOL = ['#ff4f9a', '#3fd7f2', '#f7c531', '#3ddc84', '#b38cff'];
+const isBingo = () => room?.settings?.mode === 'bingo';
+const bLevel = () => room?.settings?.bset === 'B' ? 'B' : 'A';
+const bCats = () => BCATS[bLevel()];
+const bTime = () => Math.max(10, Math.min(90, +(room?.settings?.btime ?? 25)));
+const barr = v => Array.isArray(v) ? v : v && typeof v === 'object' ? Object.keys(v).reduce((a, k) => (a[+k] = v[k], a), []) : [];
+const bCard = uid => barr(room?.bingo?.cards?.[uid]).map(x => x == null ? -1 : +x);
+const bMarks = uid => room?.bingo?.marks?.[uid] || {};
+const bIsOn = (card, marks, i) => card[i] === -1 || !!marks[i];
+function bLines(len){
+  const n = Math.round(Math.sqrt(len)), L = [];
+  for (let r = 0; r < n; r++) L.push([...Array(n)].map((_, c) => r * n + c));
+  for (let c = 0; c < n; c++) L.push([...Array(n)].map((_, r) => r * n + c));
+  L.push([...Array(n)].map((_, i) => i * n + i), [...Array(n)].map((_, i) => i * n + (n - 1 - i)));
+  return L;
+}
+// best line so far: [crossed, needed]
+function bBest(uid){
+  const card = bCard(uid), m = bMarks(uid); if (!card.length) return [0, 0];
+  const L = bLines(card.length);
+  return [Math.max(...L.map(l => l.filter(i => bIsOn(card, m, i)).length)), L[0].length];
+}
+const bWon = uid => { const [b, n] = bBest(uid); return n > 0 && b >= n; };
+const bVal = (cat, v) => v == null || v === '' ? '—' : cat?.k === 'decade' ? `${v}s` : cat?.k === 'pre2000' ? (v === 'yes' ? 'Yes, before 2000' : 'No, 2000 or later') : String(v);
+// one card as a grid. opts: {tap: 'mark'|'erase', can: cat index that may be marked, mini, uid}
+function bCardHtml(uid, opts = {}){
+  const card = bCard(uid), m = bMarks(uid), cats = bCats(), n = Math.round(Math.sqrt(card.length)) || 1;
+  return `<div class="bgrid ${opts.mini ? 'bmini' : ''}" style="--n:${n}">${card.map((c, i) => {
+    const on = bIsOn(card, m, i), free = c === -1;
+    const can = opts.tap === 'mark' ? !on && c === opts.can : opts.tap === 'erase' ? on && !free : false;
+    const dim = opts.tap === 'mark' && !can && !on;
+    return `<${can ? 'button' : 'div'} class="bcell ${on ? 'on' : ''} ${free ? 'free' : ''} ${can ? 'can' : ''} ${dim ? 'dim' : ''}" style="--c:${free ? 'transparent' : BCOL[c] || '#888'}" ${can ? `data-b${opts.tap}="${i}" data-bu="${uid}"` : ''} title="${free ? 'Free square' : esc(cats[c]?.name || '')}">${free ? '🪩' : `<span class="ic">${cats[c]?.ic || ''}</span>`}</${can ? 'button' : 'div'}>`;
+  }).join('')}</div>`;
+}
+const bLegend = () => bCats().map((c, i) => `<span class="bleg" style="--c:${BCOL[i]}"><i></i>${c.ic} ${esc(c.name)}</span>`).join('');
 // ---- player pictures: an uploaded photo (small JPEG data URL) or one of 8 silhouettes ("s:0".."s:7") ----
 const AV_SHAPES = [
   '',                                                                                     // plain
@@ -266,7 +358,7 @@ const store = {
 };
 const b64d = s => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))));
 const b64e = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-const show = id => ['s-setup', 's-lobby', 's-game'].forEach(x => $('#' + x).classList.toggle('hidden', x !== id));
+const show = id => ['s-setup', 's-lobby', 's-game', 's-bingo'].forEach(x => $('#' + x).classList.toggle('hidden', x !== id));
 const okUrl = u => /^https:\/\/[^'"()\s]+$/.test(u || '');
 const norm = s => String(s || '').toLowerCase().normalize('NFKD').replace(/[̀-֑ͯ-ׇ]/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 const cleanTitle = s => String(s || '').replace(/\s+-\s+.*$/, '').replace(/\s*[\(\[][^\)\]]*(remaster|version|edit|mix|mono|stereo|live|feat|deluxe|anniversary)[^\)\]]*[\)\]]/ig, '').trim();
@@ -413,9 +505,9 @@ document.addEventListener('visibilitychange', keepAwake); keepAwake();
 let lastJoin = '';
 function render(){
   const link = joinLink();
-  if (link !== lastJoin){ lastJoin = link; qrInto($('#lbQr'), link); qrInto($('#gmQr'), link); }
-  $('#lbCode').textContent = code; $('#gmCode').textContent = code;
-  if (room.state === 'lobby') renderLobby(); else renderGame();
+  if (link !== lastJoin){ lastJoin = link; qrInto($('#lbQr'), link); qrInto($('#gmQr'), link); qrInto($('#bgQr'), link); }
+  $('#lbCode').textContent = code; $('#gmCode').textContent = code; $('#bgCode').textContent = code;
+  if (room.state === 'lobby') renderLobby(); else if (isBingo()) renderBingoTV(); else renderGame();
 }
 function renderLobby(){
   show('s-lobby'); winShown = null; shownReveal = null; clearOverlay();
@@ -569,6 +661,71 @@ setInterval(() => {
   el.classList.toggle('up', left <= 0 || !!r.timeup);
   el.textContent = left > 0 && !r.timeup ? `⏱ ${(left / 1000).toFixed(left < 10000 ? 1 : 0)}` : "⏱ Time's up!";
 }, 100);
+
+
+// ================= bingo on the TV =================
+let tbSpinN = -1;
+function renderBingoTV(){
+  show('s-bingo'); stopOverview();
+  const r = room.round || {state: 'idle'}, cats = bCats(), cat = cats[r.cat], o = order(), act = active(), w = room.winner;
+  // category
+  const bc = $('#tbCat');
+  if (r.state !== 'idle' && cat){
+    bc.classList.remove('idle');
+    if (r.state === 'spun' && tbSpinN !== r.n && Date.now() - (r.at || 0) < 4000){
+      tbSpinN = r.n; let i = 0; const t0 = Date.now();
+      const step = () => { const k = Date.now() - t0 < 1600 ? i++ % 5 : r.cat; bc.style.setProperty('--c', BCOL[k]); bc.innerHTML = `${cats[k].ic} ${esc(cats[k].name)}`; if (k !== r.cat) setTimeout(step, 100); };
+      step();
+    } else if (Date.now() - (r.at || 0) >= 1700 || tbSpinN === r.n && r.state !== 'spun'){ bc.style.setProperty('--c', BCOL[r.cat]); bc.innerHTML = `${cat.ic} ${esc(cat.name)}`; }
+  } else { bc.classList.add('idle'); bc.style.removeProperty('--c'); bc.innerHTML = '🎲'; }
+  // status
+  let status = '', sub = '';
+  const nAns = Object.keys(room.bingo?.answers || {}).length;
+  if (w){ status = `🎱 BINGO! ${esc(pname(w))} wins!`; }
+  else if (r.state === 'idle'){ status = `🎲 ${esc(pname(act))} spins the category`; sub = 'Get ready…'; }
+  else if (r.state === 'spun'){ status = `🎲 ${esc(pname(r.spinner))} spun ${esc(cat.name)}`; sub = 'The song is coming up…'; }
+  else if (r.state === 'playing'){ status = `🎵 ${esc(cat.hint)}`; sub = `${nAns} of ${o.length} answered on their phones`; }
+  else if (r.state === 'revealed'){ const k = Object.values(r.results || {}).filter(x => x.ok).length; status = `${k} of ${o.length} got it right`; sub = r.card ? `${esc(r.card.n)} · ${esc(r.card.a)} · ${esc(r.card.y)}` : ''; }
+  $('#tbStatus').innerHTML = status; $('#tbSub').innerHTML = sub;
+  // cards
+  $('#tbCards').innerHTML = o.map(u => { const p = players()[u], x = r.results?.[u], [b, n] = bBest(u);
+    const res = r.state === 'revealed' && x ? `<div class="res ${x.ok ? 'ok' : 'bad'}" dir="auto">${x.ok ? '✅' : '❌'} ${esc(bVal(cat, x.v))}${x.ex ? ' 💯' : ''}</div>` : r.state === 'playing' ? `<div class="res">${room.bingo?.answers?.[u] ? '✓ answered' : '…'}</div>` : '';
+    return `<div class="bpl ${u === act && !w ? 'turn' : ''}" style="--pc:${pcolor(u)}"><div class="nm">${avatar(p, '2.2vw')}<span dir="auto">${esc(p.name)}</span><span class="muted">${b}/${n}</span></div>${bCardHtml(u)}${res}</div>`; }).join('');
+  const rows = o.length <= 4 ? 1 : o.length <= 10 ? 2 : 3, cols = Math.ceil(Math.max(1, o.length) / rows);   // every card fits on screen
+  $('#tbCards').style.gridTemplateColumns = `repeat(${cols}, min(calc((100vw - 4vw) / ${cols} - 1.4vw), calc((100vh - 21vw) / ${rows} - 7vw)))`;
+  $('#tbLegend').innerHTML = bLegend();
+  // big moments
+  if (w){ if (winShown !== w) bWinTV(w); }
+  else if (r.state === 'revealed' && r.card && shownReveal !== r.n){ shownReveal = r.n; bRevealTV(r, cat); }
+  else if (r.state !== 'revealed') clearOverlay();
+}
+async function bRevealTV(r, cat){
+  const c = r.card, o = order();
+  const chips = o.map(u => { const x = r.results?.[u] || {}; return `<span style="color:${x.ok ? 'var(--ok)' : 'var(--bad)'}">${x.ok ? '✅' : '❌'} <span dir="auto">${esc(pname(u))}</span></span>`; }).join('');
+  $('#overlay').innerHTML = `<div class="overlay" id="rv"><div class="reveal">${okUrl(c.c) ? `<img src="${esc(c.c)}" alt="">` : '<div class="nocv">💿</div>'}<div><div class="y">${esc(c.y)}</div><div class="t" dir="auto">${esc(c.n)}</div><div class="a" dir="auto">${esc(c.a)}</div><div class="out">${cat.ic} ${esc(cat.name)}</div><div class="bchips">${chips}</div><div class="fact hidden" id="rvFact"></div></div></div></div>`;
+  const n = r.n;
+  setTimeout(() => { if (shownReveal === n && room?.round?.n === n) clearOverlay(); }, 8000);
+  const f = await wikiFact(c), box = $('#rvFact');
+  if (box && !f.none){ box.innerHTML = `<b>📖 ${f.about === 'album' ? 'About the album' : 'Did you know?'}</b> ${esc(f.fact)}`; box.classList.remove('hidden'); }
+}
+function bWinTV(w){
+  winShown = w;
+  $('#overlay').innerHTML = `<div class="overlay"><div class="win"><div class="trophy">🎱</div><div class="name" dir="auto">BINGO! ${esc(pname(w))} wins!</div><div style="max-width:24vw;margin:1.4vw auto 0">${bCardHtml(w)}</div></div></div>`;
+  const colors = BCOL.concat(['#f97316']);
+  for (let i = 0; i < 90; i++){
+    const d = document.createElement('i'); d.className = 'confetti';
+    d.style.left = Math.random() * 100 + 'vw'; d.style.background = colors[i % colors.length];
+    d.style.animationDuration = (2.5 + Math.random() * 2.5) + 's'; d.style.animationDelay = Math.random() * 1.5 + 's';
+    $('#overlay').appendChild(d);
+  }
+}
+setInterval(() => {
+  const r = room?.round, el = $('#tbTimer'); if (!el) return;
+  const on = room?.state === 'game' && isBingo() && r?.state === 'playing' && r.deadline;
+  el.classList.toggle('hidden', !on); if (!on) return;
+  const left = Math.max(0, r.deadline - Date.now()), T = bTime() * 1000;
+  el.querySelector('i').style.width = (left / T * 100).toFixed(1) + '%'; el.querySelector('span').textContent = Math.ceil(left / 1000) + ' s'; el.classList.toggle('low', left < 5000);
+}, 250);
 
 window.SongLineTV = {state: () => ({code, room})};
 start().catch(e => { $('#setupMsg').textContent = 'Couldn\'t connect: ' + e.message; });
