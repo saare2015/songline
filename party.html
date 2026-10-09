@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<script src="i18n.js"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#14111f">
@@ -52,9 +53,10 @@ code{background:var(--field);padding:2px 6px;border-radius:6px;font-size:13px;wo
 
 /* game */
 .scorebar{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;margin-bottom:8px}
-.chip{flex:0 0 auto;background:var(--btn2);border:2px solid transparent;border-radius:12px;padding:6px 10px;color:var(--text);text-align:left;font:inherit}
+.chip{flex:0 0 auto;background:var(--btn2);border:2px solid transparent;border-radius:12px;padding:6px 10px;color:var(--text);text-align:start;font:inherit}
 .chip.turn{border-color:var(--accent);background:var(--hi)}
 .chip.me b::after{content:" (you)";color:var(--muted);font-weight:400}
+html[lang=he] .chip.me b::after{content:" (את/ה)"}
 .chip b{display:flex;align-items:center;gap:6px;font-size:14px}
 .chip span{font-size:13px;color:var(--muted);white-space:nowrap}
 .status{font-size:22px;font-weight:800;text-align:center;margin:6px 0 2px}
@@ -68,7 +70,7 @@ code{background:var(--field);padding:2px 6px;border-radius:6px;font-size:13px;wo
 .video-wrap{position:relative;width:100%;max-width:360px;aspect-ratio:1;border-radius:18px;overflow:hidden;background:#000;margin:0 auto 10px}
 .video-wrap video{width:100%;height:100%;object-fit:cover}
 .video-wrap .frame{position:absolute;inset:15%;border:3px solid rgba(255,255,255,.85);border-radius:14px;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
-.eq{display:inline-flex;gap:4px;align-items:flex-end;height:28px;vertical-align:middle;margin-right:6px}
+.eq{display:inline-flex;gap:4px;align-items:flex-end;height:28px;vertical-align:middle;margin-inline-end:6px}
 .eq i{display:block;width:6px;background:linear-gradient(var(--accent),var(--accent2));border-radius:2px;animation:eq 1s ease-in-out infinite}
 .eq i:nth-child(2){animation-delay:-.3s}.eq i:nth-child(3){animation-delay:-.6s}
 .eq.paused i{animation-play-state:paused}
@@ -89,8 +91,8 @@ code{background:var(--field);padding:2px 6px;border-radius:6px;font-size:13px;wo
 .steal-tag{font-size:12px;background:#0e3a44;color:#a5f3fc;border-radius:999px;padding:3px 10px;align-self:center}
 .deal{background:#1d2b1f;border:1px solid #166534;border-radius:12px;padding:10px;margin-bottom:10px;text-align:center}
 .welcome{background:linear-gradient(135deg,var(--accent3),var(--accent));border-radius:20px;padding:22px 18px;margin-bottom:14px;text-align:center;font-weight:900;font-size:clamp(26px,8vw,46px);line-height:1.15;white-space:pre-line;overflow-wrap:anywhere;box-shadow:0 10px 30px rgba(255,61,139,.25)}
-.welcome-count{font-size:12px;color:var(--muted);text-align:left}
-.host h2 .tag{font-size:12px;background:var(--accent3);color:#fff;border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:middle}
+.welcome-count{font-size:12px;color:var(--muted);text-align:start}
+.host h2 .tag{font-size:12px;background:var(--accent3);color:#fff;border-radius:6px;padding:1px 6px;margin-inline-start:6px;vertical-align:middle}
 
 /* timeline */
 .tl{display:flex;flex-direction:column;gap:6px}
@@ -107,13 +109,19 @@ code{background:var(--field);padding:2px 6px;border-radius:6px;font-size:13px;wo
 .tl-head select{flex:1}
 .empty{color:var(--muted);text-align:center;padding:14px;border:1px dashed var(--line);border-radius:12px}
 
+.av{width:var(--av,28px);height:var(--av,28px);border-radius:50%;overflow:hidden;flex:0 0 auto;display:inline-block;vertical-align:middle;background:var(--btn2)}
+.av img,.av svg{width:100%;height:100%;object-fit:cover;display:block}
+.avgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}
+.avgrid button{background:none;border:3px solid transparent;border-radius:50%;padding:2px;cursor:pointer;aspect-ratio:1}
+.avgrid button.sel{border-color:var(--accent)}
+.avgrid .av{--av:100%;width:100%;height:100%}
 .modal{position:fixed;inset:0;background:rgba(10,8,18,.8);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
 .modal-box{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:20px;max-width:420px;width:100%;max-height:88vh;overflow:auto}
 .hist{list-style:none;padding:0;margin:0}
 .hist li{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
 .hist .y{font-weight:800;color:var(--accent2);min-width:44px}
 .linkbtn{background:none;border:0;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:13px;padding:0}
-.dk-tag{font-size:11px;border-radius:6px;padding:1px 6px;margin-left:6px;white-space:nowrap}
+.dk-tag{font-size:11px;border-radius:6px;padding:1px 6px;margin-inline-start:6px;white-space:nowrap}
 .dk-dup{background:#3a2a0d;color:#ffd98a}.dk-played{background:#0f2e22;color:#86efac}
 .dk-y{width:64px;background:var(--field);border:1px solid var(--line);color:var(--accent2);font-weight:800;border-radius:8px;padding:4px 6px;font:inherit;font-weight:800}
 #dkList .y{flex:0 0 66px}
@@ -121,14 +129,14 @@ code{background:var(--field);padding:2px 6px;border-radius:6px;font-size:13px;wo
 .dk-keep{display:block;width:100%;margin-top:3px;background:none;border:1px solid var(--line);color:var(--muted);border-radius:6px;font-size:10px;padding:1px 4px;cursor:pointer;white-space:nowrap}
 .dk-sug{display:block;width:100%;margin-top:4px;background:none;border:1px dashed var(--warn);color:var(--warn);border-radius:6px;font-size:11px;padding:1px 6px;cursor:pointer;white-space:nowrap}
 .dk-mb{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 0;margin-bottom:8px}
-.dk-x{background:none;border:0;color:var(--muted);font-size:18px;cursor:pointer;margin-left:auto}
+.dk-x{background:none;border:0;color:var(--muted);font-size:18px;cursor:pointer;margin-inline-start:auto}
 .hist li.isdup{background:rgba(251,191,36,.07)}
-.hist .who{margin-left:auto;text-align:right;font-weight:700;white-space:nowrap}
+.hist .who{margin-inline-start:auto;text-align:end;font-weight:700;white-space:nowrap}
 
 /* collapsible host controls */
 .hostbox>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;font-weight:800;font-size:17px}
 .hostbox>summary::-webkit-details-marker{display:none}
-.hostbox>summary .chev{margin-left:auto;color:var(--muted);transition:transform .2s}
+.hostbox>summary .chev{margin-inline-start:auto;color:var(--muted);transition:transform .2s}
 .hostbox[open]>summary .chev{transform:rotate(180deg)}
 .hostbox[open]>summary{margin-bottom:12px}
 .quick{display:flex;gap:8px;margin-bottom:14px}
@@ -140,14 +148,14 @@ code{background:var(--field);padding:2px 6px;border-radius:6px;font-size:13px;wo
 .sw i{display:inline-block;width:14px;height:14px;border-radius:50%;margin:0 1px;vertical-align:middle}
 .colrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0}
 .colrow input[type=color]{width:52px;height:36px;border:0;background:none;padding:0;cursor:pointer}
-.chip{border-left:5px solid var(--pc,transparent)}
+.chip{border-inline-start:5px solid var(--pc,transparent)}
 
 /* hamburger menu */
-nav{margin-left:auto;position:relative}
+nav{margin-inline-start:auto;position:relative}
 .burger{width:42px;height:42px;border-radius:12px;border:1px solid var(--line);background:none;color:var(--text);font-size:21px;line-height:1;cursor:pointer}
 .burger[aria-expanded=true]{border-color:var(--accent)}
 .menu{position:absolute;right:0;top:48px;min-width:230px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px;box-shadow:0 14px 34px rgba(0,0,0,.5);z-index:30;display:flex;flex-direction:column;gap:2px}
-.mi{display:flex;align-items:center;gap:12px;width:100%;background:none;border:0;color:var(--text);text-align:left;padding:12px;border-radius:10px;font:inherit;font-size:15px;cursor:pointer;text-decoration:none;white-space:nowrap}
+.mi{display:flex;align-items:center;gap:12px;width:100%;background:none;border:0;color:var(--text);text-align:start;padding:12px;border-radius:10px;font:inherit;font-size:15px;cursor:pointer;text-decoration:none;white-space:nowrap}
 .mi:hover{background:rgba(255,255,255,.07)}
 .mi .ic{width:22px;text-align:center}
 .mi.on{background:var(--accent);color:var(--on-accent,#fff)}
@@ -186,7 +194,7 @@ body.light .menu{box-shadow:0 14px 34px rgba(0,0,0,.18)}
 .tl.h .gap .gl{display:none}
 .tl.h .steal-tag{writing-mode:vertical-rl;align-self:center}
 .tl.h .decade{flex-direction:column;padding:0 2px;writing-mode:vertical-rl}
-.tl.h .decade::before,.tl.h .decade::after{border-top:0;border-left:1px solid var(--line)}
+.tl.h .decade::before,.tl.h .decade::after{border-top:0;border-inline-start:1px solid var(--line)}
 .tl.h .empty{flex:1}
 .nocv{display:flex;align-items:center;justify-content:center;font-size:30px}
 /* ---------- drag to place ---------- */
@@ -243,7 +251,7 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
 <body>
 <div class="app">
   <header>
-    <a class="logo" href="./">Song<span>Line</span></a><span class="pill">ONLINE</span><span class="muted" style="font-size:11px" title="All phones should show the same version">v23</span>
+    <a class="logo" href="./">Song<span>Line</span></a><span class="pill">ONLINE</span><span class="muted" style="font-size:11px" title="All phones should show the same version">v24</span>
     <nav>
       <button class="burger" id="menuBtn" aria-label="Menu" aria-expanded="false">☰</button>
       <div class="menu hidden" id="menu">
@@ -252,6 +260,7 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
         <button class="mi hidden" id="shareBtn"><span class="ic">📤</span>Share join link</button>
         <button class="mi hidden" id="tvBtn"><span class="ic">📺</span>TV mode</button>
         <button class="mi" id="tourBtn"><span class="ic">❓</span>How to play</button>
+        <button class="mi" id="langBtn" data-notr><span class="ic">🌐</span><span id="langLbl">עברית</span></button>
         <a class="mi" href="./"><span class="ic">🏠</span>Main page</a>
         <hr class="hidden" id="leaveSep">
         <button class="mi hidden" id="leaveBtn"><span class="ic">🚪</span>Leave room</button>
@@ -285,6 +294,7 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
     <div class="panel">
       <h2>Your name</h2>
       <input class="inp" id="myName" maxlength="20" placeholder="e.g. Saar" autocomplete="nickname">
+      <div class="row" style="margin-top:10px;align-items:center;gap:10px"><button id="myAv" class="avbtn" style="background:none;border:0;padding:0;cursor:pointer" title="Change picture"></button><button class="btn secondary sm" id="avOpen">🖼 Your picture</button></div>
     </div>
     <div class="panel" id="joinPanel">
       <h2>Join a game</h2>
@@ -388,7 +398,7 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
         <button class="btn ghost" id="cancelScan" style="width:100%">Cancel</button>
       </div>
       <div id="hostPlaying" class="hidden">
-        <div class="row" style="justify-content:center;margin-bottom:8px"><span class="eq" id="eq"><i></i><i></i><i></i></span><b id="hostNow">Mystery song playing</b><span class="muted" id="countdown" style="margin-left:6px"></span></div>
+        <div class="row" style="justify-content:center;margin-bottom:8px"><span class="eq" id="eq"><i></i><i></i><i></i></span><b id="hostNow">Mystery song playing</b><span class="muted" id="countdown" style="margin-inline-start:6px"></span></div>
         <div class="row" style="justify-content:center">
           <button class="btn secondary sm" id="pauseBtn">⏸ Pause</button>
           <button class="btn secondary sm" id="replayBtn">↺ Replay</button>
@@ -529,7 +539,7 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
   <div class="modal-box" style="text-align:center">
     <h2 style="margin:0 0 6px">📺 TV mode</h2>
     <p class="muted" style="margin:0 0 10px">Show the scoreboard, the current player's cards, the countdown and big reveals on a TV or laptop. It's view-only, and the music still plays from the host's phone.</p>
-    <div style="text-align:left;font-size:15px;line-height:1.5">
+    <div style="text-align:start;font-size:15px;line-height:1.5">
       <b>On a smart TV:</b> open its web browser, go to<br><code id="tvUrl" style="font-size:15px"></code><br>and enter the room code <b id="tvCode" style="color:var(--accent2);letter-spacing:2px"></b>.
       <p class="muted" id="tvCfgNote" style="font-size:13px;margin:6px 0 0">For a TV to find your game by code, your Firebase settings must be in <code>config.js</code> (see the README). Laptops can use the button below without it.</p>
     </div>
@@ -559,6 +569,17 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
 <div class="netbar hidden" id="netbar"></div>
 <div class="toast hidden" id="toast"></div>
 
+<div class="modal hidden" id="avModal">
+  <div class="modal-box" style="text-align:center">
+    <h2 style="margin:0 0 10px">Your picture</h2>
+    <div id="avPreview"></div>
+    <label class="btn secondary sm" style="margin-top:12px;display:inline-block;cursor:pointer">📷 Upload a photo<input type="file" id="avFile" accept="image/*" hidden></label>
+    <p class="muted" style="font-size:13px;margin:12px 0 0">…or pick a silhouette (it uses your colour):</p>
+    <div class="avgrid" id="avGrid"></div>
+    <button class="btn sm" data-close>Done</button>
+  </div>
+</div>
+
 <div class="modal hidden" id="pModal">
   <div class="modal-box" style="text-align:center">
     <h2 style="margin:0 0 6px" id="pmName"></h2>
@@ -584,6 +605,46 @@ const BASE = location.origin + location.pathname.replace(/[^/]*$/, '');
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// ---- player pictures: an uploaded photo (small JPEG data URL) or one of 8 silhouettes ("s:0".."s:7") ----
+const AV_SHAPES = [
+  '',                                                                                     // plain
+  '<path d="M18 26a14 14 0 0 1 28 0v16h-5V28a9 9 0 0 0-18 0v14h-5z"/>',                     // long hair
+  '<path d="M19 22a13 12 0 0 1 26 0z"/><rect x="38" y="19" width="14" height="4" rx="2"/>',   // cap
+  '<path d="M17 28a15 15 0 0 1 30 0" fill="none" stroke="currentColor" stroke-width="3"/><rect x="14" y="24" width="7" height="11" rx="3"/><rect x="43" y="24" width="7" height="11" rx="3"/>',   // headphones
+  '<circle cx="32" cy="9" r="6"/>',                                                         // bun
+  '<circle cx="22" cy="16" r="6"/><circle cx="30" cy="11" r="6"/><circle cx="38" cy="12" r="6"/><circle cx="44" cy="19" r="5"/><circle cx="20" cy="24" r="5"/><circle cx="44" cy="27" r="5"/>',   // curls
+  '<path d="M27 14l2-9 3 7 3-8 2 10z"/>',                                                   // mohawk
+  '<path d="M44 22c8 2 9 12 5 20-1-7-4-11-8-13z"/>',                                         // ponytail
+];
+const avColor = c => /^#[0-9a-f]{6}$/i.test(c || '') ? c : '#6b5bd6';
+const avOk = s => typeof s === 'string' && s.length < 60000 && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(s);
+function avSvg(n, color){
+  const k = Math.max(0, Math.min(AV_SHAPES.length - 1, +n || 0));
+  return `<svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="${avColor(color)}"/><g fill="rgba(255,255,255,.92)" color="rgba(255,255,255,.92)">${AV_SHAPES[k]}<circle cx="32" cy="25" r="12"/><path d="M8 66c0-15 11-24 24-24s24 9 24 24z"/></g></svg>`;
+}
+// p = player record ({pic, color, name}); size in CSS units
+function avatar(p, size = '28px', extra = ''){
+  const pic = p?.pic;
+  const inner = avOk(pic) ? `<img src="${pic}" alt="">` : avSvg(String(pic || '').startsWith('s:') ? pic.slice(2) : 0, p?.color);
+  return `<span class="av ${extra}" style="--av:${size}">${inner}</span>`;
+}
+// shrink a photo to a 128 px square (centre crop) so it fits in the room data
+function avFromFile(file){
+  return new Promise((ok, bad) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const c = document.createElement('canvas'); c.width = c.height = 128;
+      const s = Math.min(img.width, img.height), g = c.getContext('2d');
+      g.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, 128, 128);
+      URL.revokeObjectURL(url);
+      let q = .8, out = c.toDataURL('image/jpeg', q);
+      while (out.length > 40000 && q > .3){ q -= .15; out = c.toDataURL('image/jpeg', q); }
+      ok(out);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); bad(new Error('not an image')); };
+    img.src = url;
+  });
+}
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const store = {
   get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
@@ -625,6 +686,7 @@ const prefs = () => ({...PREF_DEF, ...store.json('ui_prefs', {})});
 function applyPrefs(){ const p = prefs(); document.body.style.zoom = p.size; document.body.classList.toggle('anim', p.anim === 'on'); }
 function setPref(k, v){ store.set('ui_prefs', JSON.stringify({...store.json('ui_prefs', {}), [k]: v})); applyPrefs(); renderThemePicker(); if (room) render(); }
 function applyTheme(){
+  try { renderMyAv(); } catch(e){}          // silhouettes use your colour
   const t = themeNow(), r = document.documentElement.style, light = t.mode === 'light';
   if (light){
     t.bg = '#f5f3fb'; t.panel = '#ffffff'; t.line = '#e2ddef';
@@ -901,6 +963,26 @@ const genCode = () => Array.from(crypto.getRandomValues(new Uint8Array(4)), x =>
 const myName = () => $('#myName').value.trim();
 $('#myName').value = store.get('party_name') || '';
 $('#myName').oninput = () => store.set('party_name', myName());
+const myPic = () => store.get('party_pic') || 's:0';
+function renderMyAv(){
+  const me0 = {pic: myPic(), color: themeNow().accent};
+  $('#myAv').innerHTML = avatar(me0, '44px');
+  $('#avPreview').innerHTML = avatar(me0, '96px');
+  $('#avGrid').innerHTML = AV_SHAPES.map((_, i) => `<button class="${myPic() === 's:' + i ? 'sel' : ''}" data-av="s:${i}" title="Silhouette ${i + 1}">${avatar({pic: 's:' + i, color: themeNow().accent})}</button>`).join('');
+}
+function setPic(v){
+  try { store.set('party_pic', v); } catch(e){ toast('Couldn\'t save that picture'); return; }
+  renderMyAv();
+  if (typeof code !== 'undefined' && code && me && room?.players?.[me]) fb.set(R(`players/${me}/pic`), v).catch(() => toast('Couldn\'t update your picture'));
+}
+const openAv = () => { renderMyAv(); $('#avModal').classList.remove('hidden'); };
+$('#avOpen').onclick = openAv; $('#myAv').onclick = openAv;
+$('#avGrid').onclick = e => { const b = e.target.closest('[data-av]'); if (b) setPic(b.dataset.av); };
+$('#avFile').onchange = async e => {
+  const f = e.target.files?.[0]; e.target.value = ''; if (!f) return;
+  try { setPic(await avFromFile(f)); toast('Picture updated'); } catch(err){ toast('That file isn\'t a picture'); }
+};
+renderMyAv();
 
 $('#createBtn').onclick = async () => {
   if (!myName()){ msg('Enter your name first.'); $('#myName').focus(); return; }
@@ -915,7 +997,7 @@ $('#createBtn').onclick = async () => {
       try { await fb.set(R('host'), me); ok = true; } catch(e){ if (i === 5) throw e; }
     }
     const now = Date.now();
-    await fb.update(R(), {created: now, state: 'lobby', settings: {target: 10, tokens: 2, shuffle: true, welcome: store.get('party_welcome') || null, playStart: store.get('start_at') || '0', playLen: +(store.get('play_for') ?? 13), shrink: false, replays: 'inf', showTimer: true}, [`players/${me}`]: {name: myName(), joined: now, online: true, color: themeNow().accent}});
+    await fb.update(R(), {created: now, state: 'lobby', settings: {target: 10, tokens: 2, shuffle: true, welcome: store.get('party_welcome') || null, playStart: store.get('start_at') || '0', playLen: +(store.get('play_for') ?? 13), shrink: false, replays: 'inf', showTimer: true}, [`players/${me}`]: {name: myName(), joined: now, online: true, color: themeNow().accent, pic: myPic()}});
     enterRoom(code);
   } catch(e){ msg('Couldn\'t create the room: ' + esc(e.message) + '. Check the database rules and that Anonymous sign-in is enabled (README).'); }
   $('#createBtn').disabled = false;
@@ -928,7 +1010,7 @@ async function join(c){
   try {
     if (!(await fb.get(R('host'))).exists()){ msg(`No room called ${esc(c)}. Check the code with the host.`); code = null; return; }
     const mine = (await fb.get(R(`players/${me}`))).val();
-    await fb.update(R(`players/${me}`), mine ? {name: myName(), online: true, color: themeNow().accent} : {name: myName(), joined: Date.now(), online: true, color: themeNow().accent});
+    await fb.update(R(`players/${me}`), mine ? {name: myName(), online: true, color: themeNow().accent, pic: myPic()} : {name: myName(), joined: Date.now(), online: true, color: themeNow().accent, pic: myPic()});
     enterRoom(c);
   } catch(e){ msg('Couldn\'t join: ' + esc(e.message)); code = null; }
 }
@@ -1071,7 +1153,7 @@ function renderLobby(){
   if (window.qrcode){ const q = qrcode(0, 'L'); q.addData(link); q.make(); $('#lobQr').innerHTML = q.createSvgTag(4, 0); }
   const ps = Object.entries(players()).sort((a, b) => a[1].joined - b[1].joined);
   $('#lobCount').textContent = `(${ps.length})`;
-  $('#lobPlayers').innerHTML = ps.map(([u, p]) => `<li><span class="dot ${p.online === false ? 'off' : ''}"></span><span style="flex:1">${esc(p.name)}${u === room.host ? ' 👑' : ''}${u === me ? ' <span class="muted">(you)</span>' : ''}</span>${isHost() && u !== me ? `<button class="btn ghost sm" data-kick="${u}">✕</button>` : ''}</li>`).join('');
+  $('#lobPlayers').innerHTML = ps.map(([u, p]) => `<li style="align-items:center">${u === me ? `<button data-avme style="background:none;border:0;padding:0;cursor:pointer" title="Change your picture">${avatar(p, '34px')}</button>` : avatar(p, '34px')}<span class="dot ${p.online === false ? 'off' : ''}"></span><span style="flex:1">${esc(p.name)}${u === room.host ? ' 👑' : ''}${u === me ? ' <span class="muted">(you)</span>' : ''}</span>${isHost() && u !== me ? `<button class="btn ghost sm" data-kick="${u}">✕</button>` : ''}</li>`).join('');
   const wm = (room.settings?.welcome || '').trim();
   $('#lobWelcome').classList.toggle('hidden', !wm);
   $('#lobWelcome').textContent = wm;
@@ -1084,7 +1166,7 @@ function renderLobby(){
   $('#setTokens').textContent = room.settings?.tokens ?? 2;
   $('#setShuffle').checked = room.settings?.shuffle !== false;
 }
-$('#lobPlayers').onclick = e => { const u = e.target.dataset.kick; if (u && isHost()) fb.remove(R(`players/${u}`)); };
+$('#lobPlayers').onclick = e => { if (e.target.closest('[data-avme]')){ openAv(); return; } const u = e.target.dataset.kick; if (u && isHost()) fb.remove(R(`players/${u}`)); };
 $$('[data-set]').forEach(b => b.onclick = () => {
   const k = b.dataset.set, lim = k === 'target' ? [2, 50] : [0, 10];
   const v = Math.min(lim[1], Math.max(lim[0], (room.settings?.[k] ?? (k === 'target' ? 10 : 2)) + +b.dataset.d));
@@ -1147,7 +1229,7 @@ function renderGame(){
   // scoreboard
   $('#score').innerHTML = o.map(u => {
     const p = players()[u];
-    return `<button class="chip ${u === act ? 'turn' : ''} ${u === me ? 'me' : ''}" data-p="${u}" style="--pc:${/^#[0-9a-f]{6}$/i.test(p.color || '') ? p.color : 'transparent'}"><b><span class="dot ${p.online === false ? 'off' : ''}"></span>${esc(p.name)}${u === room.host ? ' 👑' : ''}</b><span>🃏 ${timeline(u).length}/${target} · 🪙 ${tok(u)}</span></button>`;
+    return `<button class="chip ${u === act ? 'turn' : ''} ${u === me ? 'me' : ''}" data-p="${u}" style="--pc:${/^#[0-9a-f]{6}$/i.test(p.color || '') ? p.color : 'transparent'}"><b>${avatar(p, '22px')}<span class="dot ${p.online === false ? 'off' : ''}"></span>${esc(p.name)}${u === room.host ? ' 👑' : ''}</b><span>🃏 ${timeline(u).length}/${target} · 🪙 ${tok(u)}</span></button>`;
   }).join('');
   // winner
   $('#winner').classList.toggle('hidden', !w);
@@ -1699,7 +1781,7 @@ async function loadPlaylists(){
     let url = '/me/playlists?limit=50', all = [];
     while (url){ const d = await sp(url.replace(API, '')); all = all.concat((d.items || []).filter(Boolean)); url = d.next; }
     const count = p => p.items?.total ?? p.tracks?.total ?? '';
-    $('#plList').innerHTML = all.map(p => `<label><input type="checkbox" value="${esc(p.id)}"> <span>${esc(p.name)}</span><span class="muted" style="margin-left:auto">${count(p)}</span></label>`).join('') || '<p class="muted" style="padding:10px;margin:0">No playlists found.</p>';
+    $('#plList').innerHTML = all.map(p => `<label><input type="checkbox" value="${esc(p.id)}"> <span>${esc(p.name)}</span><span class="muted" style="margin-inline-start:auto">${count(p)}</span></label>`).join('') || '<p class="muted" style="padding:10px;margin:0">No playlists found.</p>';
   } catch(e){ plLoaded = false; $('#plList').innerHTML = `<p class="muted" style="padding:10px;margin:0">Couldn't load playlists: ${esc(e.message)}</p>`; }
 }
 $('#loadDeck').onclick = async () => {
@@ -1877,7 +1959,7 @@ async function backToLobby(){
 
 // player edit (host)
 let pmUid = null;
-function renderPM(){ const p = players()[pmUid]; if (!p) return; $('#pmName').textContent = p.name; $('#pmTokens').textContent = tok(pmUid); $('#pmKick').classList.toggle('hidden', pmUid === me); }
+function renderPM(){ const p = players()[pmUid]; if (!p) return; $('#pmName').innerHTML = `${avatar(p, '64px')}<div style="margin-top:6px">${esc(p.name)}</div>`; $('#pmTokens').textContent = tok(pmUid); $('#pmKick').classList.toggle('hidden', pmUid === me); }
 $$('[data-tok]').forEach(b => b.onclick = async () => { if (!players()[pmUid]) return; await fb.set(R(`tokens/${pmUid}`), Math.max(0, Math.min(TOKEN_MAX, tok(pmUid) + +b.dataset.tok))); renderPM(); });
 $('#pmTurn').onclick = async () => { const i = order().indexOf(pmUid); if (i >= 0) await fb.update(R(), {turn: i, round: {state: 'idle', n: room.round?.n || 0}, placement: null, challenges: null, passes: null}); $('#pModal').classList.add('hidden'); };
 $('#pmKick').onclick = async () => { if (confirm(`Remove ${pname(pmUid)} from the game?`)){ await fb.update(R(), {[`players/${pmUid}`]: null, [`timelines/${pmUid}`]: null, [`tokens/${pmUid}`]: null}); $('#pModal').classList.add('hidden'); } };
@@ -1921,6 +2003,14 @@ document.addEventListener('click', () => { if (!wake) keepAwake(); }, {once: tru
   }
   window.SongLineParty = {state: () => ({me, code, room, answer}), onScanned, setPurpose: k => { scanPurpose = k; }};
 })();
+})();
+</script>
+<script>
+(() => {   // language switch (needs i18n.js next to this page)
+  const b = document.getElementById('langBtn'); if (!b) return;
+  if (!window.SL_I18N){ b.style.display = 'none'; return; }
+  document.getElementById('langLbl').textContent = SL_I18N.lang() === 'he' ? 'English' : 'עברית';
+  b.addEventListener('click', () => SL_I18N.toggle());
 })();
 </script>
 </body>

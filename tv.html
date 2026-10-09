@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<script src="i18n.js"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#0d0b16">
@@ -20,7 +21,7 @@ body{font-size:1.15vw}
 .logo{font-weight:900;font-size:2.2vw;letter-spacing:-.05vw}
 .logo span{color:var(--accent)}
 .pill{background:var(--accent2);color:#04212a;font-weight:900;font-size:.9vw;border-radius:999px;padding:.2vw .8vw}
-.joinbox{margin-left:auto;display:flex;align-items:center;gap:1vw;background:var(--panel);border:1px solid var(--line);border-radius:1vw;padding:.6vw 1vw}
+.joinbox{margin-inline-start:auto;display:flex;align-items:center;gap:1vw;background:var(--panel);border:1px solid var(--line);border-radius:1vw;padding:.6vw 1vw}
 .joinbox .qr{background:#fff;border-radius:.5vw;padding:.3vw;width:5.4vw;height:5.4vw}
 .joinbox .qr svg{width:100%;height:100%;display:block}
 .joinbox .code{font:900 2.4vw/1 ui-monospace,Menlo,monospace;letter-spacing:.3vw;color:var(--accent2)}
@@ -40,21 +41,25 @@ body{font-size:1.15vw}
 .bigjoin .qr svg{width:100%;height:100%;display:block}
 .bigjoin .code{font:900 6vw/1 ui-monospace,Menlo,monospace;letter-spacing:1vw;color:var(--accent2)}
 .lobby-players{display:flex;flex-wrap:wrap;gap:.8vw;justify-content:center;margin-top:1.6vw}
-.lobby-players span{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:.5vw 1.2vw;font-weight:800;font-size:1.5vw;border-left:.5vw solid var(--pc,var(--line))}
+.av{width:var(--av,2vw);height:var(--av,2vw);border-radius:50%;overflow:hidden;flex:0 0 auto;display:inline-block;vertical-align:middle;background:var(--panel)}
+.av img,.av svg{width:100%;height:100%;object-fit:cover;display:block}
+.lobby-players span.av{padding:0;border:0;border-radius:50%}
+.lobby-players > span{display:inline-flex;align-items:center;gap:.6vw}
+.lobby-players span{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:.5vw 1.2vw;font-weight:800;font-size:1.5vw;border-inline-start:.5vw solid var(--pc,var(--line))}
 
 /* game */
 .game{flex:1;display:grid;grid-template-columns:23vw 1fr;gap:1.6vw;min-height:0}
 .board{background:var(--panel);border:1px solid var(--line);border-radius:1.4vw;padding:1vw;display:flex;flex-direction:column;gap:.7vw;overflow:hidden}
 .board h3{margin:0 0 .2vw;font-size:1.1vw;color:var(--muted);letter-spacing:.2vw;text-transform:uppercase}
-.prow{display:grid;grid-template-columns:auto 1fr auto;gap:.3vw .8vw;align-items:center;background:var(--card);border-radius:.9vw;padding:.7vw .9vw;border-left:.45vw solid var(--pc,transparent);transition:transform .3s}
+.prow{display:grid;grid-template-columns:auto 1fr auto;gap:.3vw .8vw;align-items:center;background:var(--card);border-radius:.9vw;padding:.7vw .9vw;border-inline-start:.45vw solid var(--pc,transparent);transition:transform .3s}
 .prow.turn{outline:.2vw solid var(--accent);transform:scale(1.03)}
 .prow .rank{font-weight:900;color:var(--muted);font-size:1.2vw;width:1.6vw}
-.prow .nm{font-weight:900;font-size:1.5vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prow .nm{display:flex;align-items:center;gap:.5vw;font-weight:900;font-size:1.5vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .prow .tk{font-size:1.2vw;white-space:nowrap}
 .prow .bar{grid-column:2 / 4;height:.55vw;background:var(--line);border-radius:999px;overflow:hidden}
 .prow .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent3),var(--accent));border-radius:999px;transition:width .6s}
 .prow .cnt{grid-column:2 / 4;font-size:1vw;color:var(--muted)}
-.prow .dot{width:.7vw;height:.7vw;border-radius:50%;background:var(--ok);display:inline-block;margin-right:.4vw;vertical-align:middle}
+.prow .dot{width:.7vw;height:.7vw;border-radius:50%;background:var(--ok);display:inline-block;margin-inline-end:.4vw;vertical-align:middle}
 .prow .dot.off{background:#555}
 .main{display:flex;flex-direction:column;min-height:0;min-width:0}
 .status{font-size:3vw;font-weight:900;line-height:1.1}
@@ -81,10 +86,10 @@ body{font-size:1.15vw}
 .decade{writing-mode:vertical-rl;font-size:.9vw;font-weight:900;letter-spacing:.3vw;color:var(--muted);display:flex;align-items:center;justify-content:center;border-left:1px solid var(--line);padding-left:.3vw}
 .overview{display:grid;gap:1vw;align-content:start;overflow:hidden}
 .ov-row{display:flex;align-items:center;gap:1vw}
-.ov-row .who{width:10vw;font-weight:900;font-size:1.3vw;border-left:.4vw solid var(--pc,var(--line));padding-left:.6vw}
+.ov-row .who{width:10vw;font-weight:900;font-size:1.3vw;border-inline-start:.4vw solid var(--pc,var(--line));padding-inline-start:.6vw}
 .ov-row .mini{display:flex;gap:.5vw;flex-wrap:nowrap;overflow:hidden}
 .ov-row .mini span{background:var(--card);border-radius:.5vw;padding:.35vw .6vw;font-weight:900;color:var(--accent2);font-size:1.1vw;white-space:nowrap}
-.ov-row .mini img{width:2.6vw;height:2.6vw;border-radius:.3vw;object-fit:cover;vertical-align:middle;margin-right:.3vw}
+.ov-row .mini img{width:2.6vw;height:2.6vw;border-radius:.3vw;object-fit:cover;vertical-align:middle;margin-inline-end:.3vw}
 
 /* reveal + winner overlays */
 .overlay{position:fixed;inset:0;background:rgba(8,6,14,.82);display:flex;align-items:center;justify-content:center;z-index:20;animation:fade .3s}
@@ -99,7 +104,7 @@ body{font-size:1.15vw}
 .win{text-align:center}
 .win .trophy{font-size:12vw;animation:pop .8s}
 .win .name{font-size:6vw;font-weight:900}
-.win ol{list-style:none;padding:0;margin:2vw auto 0;font-size:2vw;display:inline-block;text-align:left}
+.win ol{list-style:none;padding:0;margin:2vw auto 0;font-size:2vw;display:inline-block;text-align:start}
 .win li{margin:.4vw 0}
 .confetti{position:fixed;top:-5vh;width:1vw;height:1.6vw;border-radius:.2vw;animation:fall linear forwards;z-index:21}
 @keyframes fall{to{transform:translateY(115vh) rotate(720deg)}}
@@ -189,7 +194,7 @@ body.light .card .nocv{background:#e2ddef}
 </div>
 
 <div id="overlay"></div>
-<div class="tvbtns" id="tvBtns"><button class="btn ghost" id="themeBtn">🎨 Colors</button><button class="btn ghost" id="fsBtn">⛶ Full screen</button></div>
+<div class="tvbtns" id="tvBtns"><button class="btn ghost" id="themeBtn">🎨 Colors</button><button class="btn ghost" id="fsBtn">⛶ Full screen</button><button class="btn ghost" id="langBtn" data-notr>🌐 <span id="langLbl">עברית</span></button></div>
 <div class="modal hidden" id="themeModal">
   <div class="modal-box">
     <h2 style="margin:0 0 4px">🎨 Colors</h2>
@@ -214,6 +219,46 @@ const FB = 'https://www.gstatic.com/firebasejs/12.19.0/';
 const BASE = location.origin + location.pathname.replace(/[^/]*$/, '');
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// ---- player pictures: an uploaded photo (small JPEG data URL) or one of 8 silhouettes ("s:0".."s:7") ----
+const AV_SHAPES = [
+  '',                                                                                     // plain
+  '<path d="M18 26a14 14 0 0 1 28 0v16h-5V28a9 9 0 0 0-18 0v14h-5z"/>',                     // long hair
+  '<path d="M19 22a13 12 0 0 1 26 0z"/><rect x="38" y="19" width="14" height="4" rx="2"/>',   // cap
+  '<path d="M17 28a15 15 0 0 1 30 0" fill="none" stroke="currentColor" stroke-width="3"/><rect x="14" y="24" width="7" height="11" rx="3"/><rect x="43" y="24" width="7" height="11" rx="3"/>',   // headphones
+  '<circle cx="32" cy="9" r="6"/>',                                                         // bun
+  '<circle cx="22" cy="16" r="6"/><circle cx="30" cy="11" r="6"/><circle cx="38" cy="12" r="6"/><circle cx="44" cy="19" r="5"/><circle cx="20" cy="24" r="5"/><circle cx="44" cy="27" r="5"/>',   // curls
+  '<path d="M27 14l2-9 3 7 3-8 2 10z"/>',                                                   // mohawk
+  '<path d="M44 22c8 2 9 12 5 20-1-7-4-11-8-13z"/>',                                         // ponytail
+];
+const avColor = c => /^#[0-9a-f]{6}$/i.test(c || '') ? c : '#6b5bd6';
+const avOk = s => typeof s === 'string' && s.length < 60000 && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(s);
+function avSvg(n, color){
+  const k = Math.max(0, Math.min(AV_SHAPES.length - 1, +n || 0));
+  return `<svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="${avColor(color)}"/><g fill="rgba(255,255,255,.92)" color="rgba(255,255,255,.92)">${AV_SHAPES[k]}<circle cx="32" cy="25" r="12"/><path d="M8 66c0-15 11-24 24-24s24 9 24 24z"/></g></svg>`;
+}
+// p = player record ({pic, color, name}); size in CSS units
+function avatar(p, size = '28px', extra = ''){
+  const pic = p?.pic;
+  const inner = avOk(pic) ? `<img src="${pic}" alt="">` : avSvg(String(pic || '').startsWith('s:') ? pic.slice(2) : 0, p?.color);
+  return `<span class="av ${extra}" style="--av:${size}">${inner}</span>`;
+}
+// shrink a photo to a 128 px square (centre crop) so it fits in the room data
+function avFromFile(file){
+  return new Promise((ok, bad) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const c = document.createElement('canvas'); c.width = c.height = 128;
+      const s = Math.min(img.width, img.height), g = c.getContext('2d');
+      g.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, 128, 128);
+      URL.revokeObjectURL(url);
+      let q = .8, out = c.toDataURL('image/jpeg', q);
+      while (out.length > 40000 && q > .3){ q -= .15; out = c.toDataURL('image/jpeg', q); }
+      ok(out);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); bad(new Error('not an image')); };
+    img.src = url;
+  });
+}
 const store = {
   get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
   set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} },
@@ -377,7 +422,7 @@ function renderLobby(){
   const wm = (room.settings?.welcome || '').trim() || '🎵 SongLine';
   $('#lbWelcome').textContent = wm;
   $('#lbPlayers').innerHTML = Object.entries(players()).sort((a, b) => a[1].joined - b[1].joined)
-    .map(([u, p]) => `<span style="--pc:${pcolor(u)}" dir="auto">${esc(p.name)}${u === room.host ? ' 👑' : ''}</span>`).join('') || '<span class="muted">Waiting for players…</span>';
+    .map(([u, p]) => `<span style="--pc:${pcolor(u)}" dir="auto">${avatar(p, '2.6vw')}${esc(p.name)}${u === room.host ? ' 👑' : ''}</span>`).join('') || '<span class="muted">Waiting for players…</span>';
 }
 
 function clipSummary(){
@@ -397,7 +442,7 @@ function renderGame(){
   $('#board').innerHTML = ranked.map((u, i) => {
     const n = timeline(u).length, p = players()[u];
     return `<div class="prow ${u === act && !w ? 'turn' : ''}" style="--pc:${pcolor(u)}">
-      <div class="rank">${i + 1}</div><div class="nm" dir="auto"><span class="dot ${p.online === false ? 'off' : ''}"></span>${esc(p.name)}${u === room.host ? ' 👑' : ''}</div><div class="tk">🪙 ${tok(u)}</div>
+      <div class="rank">${i + 1}</div><div class="nm" dir="auto">${avatar(p, '2.4vw')}<span class="dot ${p.online === false ? 'off' : ''}"></span>${esc(p.name)}${u === room.host ? ' 👑' : ''}</div><div class="tk">🪙 ${tok(u)}</div>
       <div class="bar"><i style="width:${Math.min(100, n / target * 100)}%"></i></div><div class="cnt">🃏 ${n} / ${target}${u === act && !w ? ' · 🎯 playing now' : ''}</div></div>`;
   }).join('');
   // status
@@ -527,6 +572,14 @@ setInterval(() => {
 
 window.SongLineTV = {state: () => ({code, room})};
 start().catch(e => { $('#setupMsg').textContent = 'Couldn\'t connect: ' + e.message; });
+})();
+</script>
+<script>
+(() => {   // language switch (needs i18n.js next to this page)
+  const b = document.getElementById('langBtn'); if (!b) return;
+  if (!window.SL_I18N){ b.style.display = 'none'; return; }
+  document.getElementById('langLbl').textContent = SL_I18N.lang() === 'he' ? 'English' : 'עברית';
+  b.addEventListener('click', () => SL_I18N.toggle());
 })();
 </script>
 </body>
