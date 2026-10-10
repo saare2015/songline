@@ -329,6 +329,7 @@ body.light tr.isdup td{background:rgba(251,191,36,.12)}
 
       <div class="panel hidden" id="tracksPanel">
         <h2>2. Check the years</h2>
+        <p class="muted" id="ysState" style="font-size:13px;margin:-4px 0 8px"></p>
         <p class="muted">Spotify often gives the year of a remaster or compilation instead of the original release. Edit any year directly, or let MusicBrainz and Wikipedia (Hebrew Wikipedia for Hebrew songs) suggest original years (about 1 song per second, or much faster with Quick on). Your edits are remembered in this browser.</p>
         <div class="row" style="margin-bottom:10px">
           <button class="btn secondary" id="mbBtn">Suggest original years</button>
@@ -523,6 +524,68 @@ const store = {
   del(k){ try{ localStorage.removeItem(k); }catch(e){} },
   json(k,d){ try{ return JSON.parse(this.get(k)) ?? d; }catch(e){ return d; } }
 };
+// ================= song years shared across all your devices =================
+// Year fixes (year_overrides) and the original-year check results (orig_years / orig_src) are kept in this browser
+// as before, and mirrored to your Firebase project under songyears/<spotify track id> = {y, o, s, t}.
+// Every phone/computer that uses the same Firebase settings sees the same years.
+const YearSync = (() => {
+  const KEYS = {year_overrides: 'y', orig_years: 'o', orig_src: 's'}, FIELDS = {y: 'year_overrides', o: 'orig_years', s: 'orig_src'};
+  const ID = /^[A-Za-z0-9]{22}$/, rawSet = Storage.prototype.setItem;
+  let api = null, dbRef = null, ready = false, status = 'off', fails = 0;
+  const subs = [];
+  const read = k => { try { return JSON.parse(localStorage.getItem(k) || '{}') || {}; } catch(e){ return {}; } };
+  const setStatus = s => { status = s; subs.forEach(f => { try { f(s); } catch(e){} }); };
+  const push = upd => { if (Object.keys(upd).length) api.update(dbRef, upd).catch(() => { fails++; setStatus('error'); }); };
+  // every change this page saves to one of the three keys is sent to Firebase too
+  Storage.prototype.setItem = function(k, v){
+    if (this !== localStorage || !KEYS[k] || !ready) return rawSet.call(this, k, v);
+    const before = read(k); rawSet.call(this, k, v);
+    const after = read(k), f = KEYS[k], upd = {}, now = Date.now();
+    for (const id of new Set([...Object.keys(before), ...Object.keys(after)]))
+      if (ID.test(id) && before[id] !== after[id]){ upd[`${id}/${f}`] = after[id] ?? null; upd[`${id}/t`] = now; }
+    push(upd);
+  };
+  // Firebase → this device. Ids this device has synced before follow Firebase exactly (so deletions carry over);
+  // anything only this device knows about is uploaded once.
+  function apply(remote){
+    remote = remote && typeof remote === 'object' ? remote : {};
+    let synced; try { synced = new Set(JSON.parse(localStorage.getItem('years_synced') || '[]')); } catch(e){ synced = new Set(); }
+    const out = {y: {}, o: {}, s: {}}, up = {}, now = Date.now();
+    for (const [id, r] of Object.entries(remote)){ if (!ID.test(id) || !r) continue; if (r.y) out.y[id] = String(r.y); if (r.o != null) out.o[id] = String(r.o); if (r.s) out.s[id] = String(r.s); }
+    for (const f of ['y', 'o', 's']) for (const [id, v] of Object.entries(read(FIELDS[f]))){
+      if (!ID.test(id) || synced.has(id) || (remote[id] && remote[id][f] != null)) continue;
+      out[f][id] = v; up[`${id}/${f}`] = v; up[`${id}/t`] = now;
+    }
+    for (const f of ['y', 'o', 's']) rawSet.call(localStorage, FIELDS[f], JSON.stringify(out[f]));
+    Object.keys(remote).concat(Object.keys(up).map(k => k.split('/')[0])).forEach(id => synced.add(id));
+    rawSet.call(localStorage, 'years_synced', JSON.stringify([...synced]));
+    if (ready) push(up); else { ready = true; push(up); }
+    window.dispatchEvent(new Event('songyears'));
+  }
+  return {
+    status: () => status,
+    onStatus(f){ subs.push(f); f(status); },
+    // fbApi: the firebase-database module functions (ref, onValue, update); db: getDatabase(app)
+    attach(fbApi, db){
+      if (api) return; api = fbApi; dbRef = api.ref(db, 'songyears'); setStatus('connecting');
+      api.onValue(dbRef, s => { apply(s.val()); if (!fails) setStatus('on'); }, () => setStatus('error'));
+    },
+    // the main page has no Firebase of its own: start one just for this, if the project is known on this device
+    async init(cfgLoader){
+      try {
+        const cfg = await cfgLoader(); if (!cfg){ setStatus('off'); return; }
+        const V = 'https://www.gstatic.com/firebasejs/12.19.0/';
+        const [appM, authM, dbM] = await Promise.all([import(V + 'firebase-app.js'), import(V + 'firebase-auth.js'), import(V + 'firebase-database.js')]);
+        const app = appM.initializeApp(cfg, 'songyears');
+        await authM.signInAnonymously(authM.getAuth(app));
+        this.attach(dbM, dbM.getDatabase(app));
+      } catch(e){ setStatus('error'); }
+    },
+  };
+})();
+window.YearSync = YearSync;
+const ysText = s => ({on: '☁ Years sync across all your devices.', connecting: '☁ Connecting to sync years…', error: '☁ Couldn\'t sync years. In the Firebase console, publish the updated database rules (see the README).', off: '☁ Years are saved on this device only. Set up online mode (Firebase) to sync them across your devices.'}[s] || '');
+window.ysText = ysText;
 
 function showMsg(text, kind='err', el=$('#globalMsg')){
   el.innerHTML = text ? `<div class="msg ${kind}">${text}</div>` : '';
@@ -1195,8 +1258,8 @@ $('#importFile').onchange = async e => {
   for (const r of rows){
     const id = (parseTrack(r[iId]) || r[iId] || '').trim();
     if (!/^[A-Za-z0-9]{22}$/.test(id) || seen.has(id)) continue;
-    seen.add(id); delete o[id]; added++;
-    const artist = r[col('artist')] || '';
+    const artist = r[col('artist')] || '', cy = (r[col('year')] || '').trim();
+    seen.add(id); if (o[id] && /^\d{4}$/.test(cy)) o[id] = cy; added++;   // the list's year wins (and syncs)
     tracks.push({id, year: (r[col('year')] || '').trim(), title: r[col('title')] || '', artist, firstArtist: artist.split(',')[0].trim(), cover: col('cover') >= 0 ? (r[col('cover')] || '') : ''});
   }
   store.set('year_overrides', JSON.stringify(o));
@@ -1548,7 +1611,23 @@ window.addEventListener('hashchange', () => {
     if (id && clientId()) showMsg('Log in to Spotify first; after logging in, this card will play automatically.', 'info');
   }
 })();
+// ---- sync years across devices ----
+YearSync.onStatus(st => { const el = document.getElementById('ysState'); if (el) el.textContent = ysText(st); });
+window.addEventListener('songyears', () => { if (tracks.length && !document.activeElement?.closest?.('#tbody')) renderTable(); });
+YearSync.init(async () => {
+  if (window.SONGLINE_FIREBASE?.apiKey) return window.SONGLINE_FIREBASE;
+  try { const c = JSON.parse(localStorage.getItem('fb_config') || 'null'); if (c?.apiKey) return c; } catch(e){}
+  try {   // config.js, read as text so a copy-paste slip in it doesn't matter
+    const t = await (await fetch('config.js', {cache: 'no-store'})).text(), cfg = {};
+    const body = t.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n');
+    for (const m of body.matchAll(/["']?(\w+)["']?\s*:\s*["']([^"']+)["']/g)) cfg[m[1]] = m[2];
+    if (!cfg.apiKey || !cfg.projectId || /…|\.\.\./.test(cfg.apiKey)) return null;
+    if (!cfg.databaseURL) cfg.databaseURL = `https://${cfg.projectId}-default-rtdb.firebaseio.com`;
+    return cfg;
+  } catch(e){ return null; }
+});
 })();
+
 </script>
 <script>
 (() => {   // language switch (needs i18n.js next to this page)

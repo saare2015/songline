@@ -602,6 +602,7 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
         <span class="muted" id="dkMbState" style="font-size:13px"></span>
       </div>
       <label class="muted" style="font-size:13px;margin-top:6px;display:flex;gap:8px;align-items:baseline"><input type="checkbox" id="dkMbQuick" checked style="flex:none"> <span>Quick: only songs that look like remasters or compilations <span id="dkMbQuickN"></span></span></label>
+      <p class="muted" id="ysState" style="font-size:12px;margin:6px 0 0"></p>
       <p class="muted" style="font-size:12px;margin:6px 0 0">Spotify often shows the year of a remaster or compilation. This checks MusicBrainz (a free music database) and Wikipedia (Hebrew Wikipedia for Hebrew songs) for the first release of each song, newest years first. Tap a year to edit it yourself.</p>
     </div>
     <div class="row" style="margin-bottom:8px;justify-content:space-between">
@@ -843,6 +844,68 @@ const store = {
   del(k){ try{ localStorage.removeItem(k); }catch(e){} },
   json(k,d){ try{ return JSON.parse(this.get(k)) ?? d; }catch(e){ return d; } }
 };
+// ================= song years shared across all your devices =================
+// Year fixes (year_overrides) and the original-year check results (orig_years / orig_src) are kept in this browser
+// as before, and mirrored to your Firebase project under songyears/<spotify track id> = {y, o, s, t}.
+// Every phone/computer that uses the same Firebase settings sees the same years.
+const YearSync = (() => {
+  const KEYS = {year_overrides: 'y', orig_years: 'o', orig_src: 's'}, FIELDS = {y: 'year_overrides', o: 'orig_years', s: 'orig_src'};
+  const ID = /^[A-Za-z0-9]{22}$/, rawSet = Storage.prototype.setItem;
+  let api = null, dbRef = null, ready = false, status = 'off', fails = 0;
+  const subs = [];
+  const read = k => { try { return JSON.parse(localStorage.getItem(k) || '{}') || {}; } catch(e){ return {}; } };
+  const setStatus = s => { status = s; subs.forEach(f => { try { f(s); } catch(e){} }); };
+  const push = upd => { if (Object.keys(upd).length) api.update(dbRef, upd).catch(() => { fails++; setStatus('error'); }); };
+  // every change this page saves to one of the three keys is sent to Firebase too
+  Storage.prototype.setItem = function(k, v){
+    if (this !== localStorage || !KEYS[k] || !ready) return rawSet.call(this, k, v);
+    const before = read(k); rawSet.call(this, k, v);
+    const after = read(k), f = KEYS[k], upd = {}, now = Date.now();
+    for (const id of new Set([...Object.keys(before), ...Object.keys(after)]))
+      if (ID.test(id) && before[id] !== after[id]){ upd[`${id}/${f}`] = after[id] ?? null; upd[`${id}/t`] = now; }
+    push(upd);
+  };
+  // Firebase → this device. Ids this device has synced before follow Firebase exactly (so deletions carry over);
+  // anything only this device knows about is uploaded once.
+  function apply(remote){
+    remote = remote && typeof remote === 'object' ? remote : {};
+    let synced; try { synced = new Set(JSON.parse(localStorage.getItem('years_synced') || '[]')); } catch(e){ synced = new Set(); }
+    const out = {y: {}, o: {}, s: {}}, up = {}, now = Date.now();
+    for (const [id, r] of Object.entries(remote)){ if (!ID.test(id) || !r) continue; if (r.y) out.y[id] = String(r.y); if (r.o != null) out.o[id] = String(r.o); if (r.s) out.s[id] = String(r.s); }
+    for (const f of ['y', 'o', 's']) for (const [id, v] of Object.entries(read(FIELDS[f]))){
+      if (!ID.test(id) || synced.has(id) || (remote[id] && remote[id][f] != null)) continue;
+      out[f][id] = v; up[`${id}/${f}`] = v; up[`${id}/t`] = now;
+    }
+    for (const f of ['y', 'o', 's']) rawSet.call(localStorage, FIELDS[f], JSON.stringify(out[f]));
+    Object.keys(remote).concat(Object.keys(up).map(k => k.split('/')[0])).forEach(id => synced.add(id));
+    rawSet.call(localStorage, 'years_synced', JSON.stringify([...synced]));
+    if (ready) push(up); else { ready = true; push(up); }
+    window.dispatchEvent(new Event('songyears'));
+  }
+  return {
+    status: () => status,
+    onStatus(f){ subs.push(f); f(status); },
+    // fbApi: the firebase-database module functions (ref, onValue, update); db: getDatabase(app)
+    attach(fbApi, db){
+      if (api) return; api = fbApi; dbRef = api.ref(db, 'songyears'); setStatus('connecting');
+      api.onValue(dbRef, s => { apply(s.val()); if (!fails) setStatus('on'); }, () => setStatus('error'));
+    },
+    // the main page has no Firebase of its own: start one just for this, if the project is known on this device
+    async init(cfgLoader){
+      try {
+        const cfg = await cfgLoader(); if (!cfg){ setStatus('off'); return; }
+        const V = 'https://www.gstatic.com/firebasejs/12.19.0/';
+        const [appM, authM, dbM] = await Promise.all([import(V + 'firebase-app.js'), import(V + 'firebase-auth.js'), import(V + 'firebase-database.js')]);
+        const app = appM.initializeApp(cfg, 'songyears');
+        await authM.signInAnonymously(authM.getAuth(app));
+        this.attach(dbM, dbM.getDatabase(app));
+      } catch(e){ setStatus('error'); }
+    },
+  };
+})();
+window.YearSync = YearSync;
+const ysText = s => ({on: '☁ Years sync across all your devices.', connecting: '☁ Connecting to sync years…', error: '☁ Couldn\'t sync years. In the Firebase console, publish the updated database rules (see the README).', off: '☁ Years are saved on this device only. Set up online mode (Firebase) to sync them across your devices.'}[s] || '');
+window.ysText = ysText;
 function msg(text, kind = 'err'){ $('#msg').innerHTML = text ? `<div class="msg ${kind}">${text}</div>` : ''; }
 function show(id){ $$('section[id^="s-"]').forEach(s => s.classList.toggle('hidden', s.id !== id)); }
 $$('[data-close]').forEach(b => b.onclick = () => b.closest('.modal').classList.add('hidden'));
@@ -1823,7 +1886,7 @@ function setDeckYear(id, y){
   const t = deck.find(x => x.id === id); if (!t) return;
   const o = store.json('year_overrides', {});
   y = String(y || '').trim();
-  if (!/^\d{4}$/.test(y) || y === String(t.y)) delete o[id]; else o[id] = y;
+  if (!/^\d{4}$/.test(y)) delete o[id]; else o[id] = y;          // keep it even if it matches: the fix syncs to your other devices
   store.set('year_overrides', JSON.stringify(o));
 }
 // ---- original-year results, shared by the main page and the online song list ----
@@ -1963,6 +2026,8 @@ $('#dkList').addEventListener('change', e => { const id = e.target.dataset.dky; 
 $('#dkList').addEventListener('keydown', e => { if (e.target.dataset.dky && e.key === 'Enter') e.target.blur(); });
 function saveDeck(){ store.set('party_deck', JSON.stringify(deck)); renderDeckView(); render(); if (deck.length) $('#deckState').textContent = `✓ ${deck.length} songs ready.`; }
 function openDeckView(){ if (!deck.length) return; $('#deckModal').classList.remove('hidden'); renderDeckView(); }
+YearSync.onStatus(st => { const el = document.getElementById('ysState'); if (el) el.textContent = ysText(st); });
+window.addEventListener('songyears', () => { if (!$('#deckModal').classList.contains('hidden') && !document.activeElement?.closest?.('#dkList')) renderDeckView(); });
 $('#viewDeck').onclick = openDeckView; $('#viewDeck2').onclick = openDeckView;
 ['dkSearch', 'dkSort', 'dkDupOnly', 'dkSugOnly'].forEach(id => $('#' + id).addEventListener('input', renderDeckView));
 $('#dkDupOnly').addEventListener('change', renderDeckView);
@@ -2593,7 +2658,7 @@ document.addEventListener('click', () => { if (!wake) keepAwake(); }, {once: tru
   if (!FIREBASE_CONFIG && !new URLSearchParams(location.search).get('cfg')){ const fc = await loadConfigFile(); if (fc) FIREBASE_CONFIG = fc; }
   const cfg = getConfig();
   if (!cfg){ show('s-config'); msg('This site isn\'t connected to Firebase yet. If you\'re a player, ask the host for the join QR code.', 'info'); return; }
-  try { await initFirebase(cfg); }
+  try { await initFirebase(cfg); YearSync.attach(fb, db); }
   catch(e){ show('s-config'); $('#cfgText').value = JSON.stringify(cfg, null, 2); msg('Couldn\'t connect to Firebase: ' + esc(e.message) + '. Check the config and that Anonymous sign-in is enabled.'); return; }
   let everConnected = false;
   try { fb.onValue(fb.ref(db, '.info/connected'), sn => { const v = sn.val(); if (v === true){ if (everConnected) showNet('up'); everConnected = true; } else if (v === false && everConnected) showNet('down'); }); } catch(e){}
