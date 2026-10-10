@@ -104,6 +104,9 @@ html[dir=rtl] .btimer i{inset:0 0 0 auto}
 .bcards{flex:1;display:grid;gap:1.4vw;align-content:start;justify-content:center;overflow:hidden}
 .bpl{background:var(--panel);border:1px solid var(--line);border-radius:1.2vw;padding:1vw;border-top:.4vw solid var(--pc,var(--line))}
 .bpl.turn{box-shadow:0 0 0 .25vw var(--accent)}
+.bpl.tie{box-shadow:0 0 0 .3vw #ef4444}
+
+.bcell.pat:not(.on){box-shadow:inset 0 0 0 .25vw rgba(255,255,255,.75)}
 .bpl .nm{display:flex;align-items:center;gap:.6vw;font-weight:900;font-size:1.4vw;margin-bottom:.6vw}
 .bpl .nm .muted{margin-inline-start:auto;font-weight:700;font-size:1.1vw}
 .bpl .res{margin-top:.6vw;font-weight:800;font-size:1.2vw;text-align:center}
@@ -277,13 +280,34 @@ const BCATS = {
   ],
 };
 const BCOL = ['#ff4f9a', '#3fd7f2', '#f7c531', '#3ddc84', '#b38cff'];
+// what you need to win
+const BWINS = {
+  line:    {name: '1 line',      lbl: 'in a line'},
+  lines2:  {name: '2 lines',     lbl: 'toward 2 lines'},
+  corners: {name: 'Four corners', lbl: 'corners'},
+  x:       {name: 'X shape',     lbl: 'of the X'},
+  full:    {name: 'Full card',   lbl: 'squares'},
+};
+const BTEAMS = [{name: '🦊 Foxes', c: '#ff7a45'}, {name: '🐬 Dolphins', c: '#38bdf8'}, {name: '🦁 Lions', c: '#facc15'}, {name: '🐼 Pandas', c: '#e5e7eb'}, {name: '🦉 Owls', c: '#a78bfa'}, {name: '🐝 Bees', c: '#fbbf24'}, {name: '🐸 Frogs', c: '#4ade80'}, {name: '🦄 Unicorns', c: '#f472b6'}];
+const BTEAM_MAX = BTEAMS.length;
+const bTeamName = k => String(room?.settings?.bteamNames?.[k] || '').trim().slice(0, 24) || BTEAMS[k]?.name || `Team ${+k + 1}`;
 const isBingo = () => room?.settings?.mode === 'bingo';
 const bLevel = () => room?.settings?.bset === 'B' ? 'B' : 'A';
 const bCats = () => BCATS[bLevel()];
 const bTime = () => Math.max(10, Math.min(90, +(room?.settings?.btime ?? 25)));
+const bWin = () => BWINS[room?.settings?.bwin] ? room.settings.bwin : 'line';
+const bTeamN = () => { const n = +(room?.settings?.bteams || 0); return n >= 2 && n <= BTEAM_MAX ? n : 0; };
 const barr = v => Array.isArray(v) ? v : v && typeof v === 'object' ? Object.keys(v).reduce((a, k) => (a[+k] = v[k], a), []) : [];
-const bCard = uid => barr(room?.bingo?.cards?.[uid]).map(x => x == null ? -1 : +x);
-const bMarks = uid => room?.bingo?.marks?.[uid] || {};
+// a card belongs to an "owner": the player, or their team ("t0".."t3") in team mode
+const bTeamsOn = () => !!room?.bingo?.teams;
+const bOwnerOf = uid => bTeamsOn() ? (room.bingo.teams[uid] != null ? 't' + room.bingo.teams[uid] : null) : uid;
+const bOwners = () => bTeamsOn() ? [...new Set(order().map(bOwnerOf).filter(Boolean))].sort() : order();
+const bMembers = ow => String(ow).startsWith('t') && bTeamsOn() ? order().filter(u => bOwnerOf(u) === ow) : [ow];
+const bTeam = ow => { const k = +String(ow).slice(1) || 0; return {name: bTeamName(k), c: (BTEAMS[k] || BTEAMS[0]).c}; };
+const bOwnerName = ow => String(ow).startsWith('t') && bTeamsOn() ? bTeam(ow).name : pname(ow);
+const bOwnerColor = ow => String(ow).startsWith('t') && bTeamsOn() ? bTeam(ow).c : (/^#[0-9a-f]{6}$/i.test(players()[ow]?.color || '') ? players()[ow].color : 'transparent');
+const bCard = ow => barr(room?.bingo?.cards?.[ow]).map(x => x == null ? -1 : +x);
+const bMarks = ow => room?.bingo?.marks?.[ow] || {};
 const bIsOn = (card, marks, i) => card[i] === -1 || !!marks[i];
 function bLines(len){
   const n = Math.round(Math.sqrt(len)), L = [];
@@ -292,25 +316,37 @@ function bLines(len){
   L.push([...Array(n)].map((_, i) => i * n + i), [...Array(n)].map((_, i) => i * n + (n - 1 - i)));
   return L;
 }
-// best line so far: [crossed, needed]
-function bBest(uid){
-  const card = bCard(uid), m = bMarks(uid); if (!card.length) return [0, 0];
-  const L = bLines(card.length);
-  return [Math.max(...L.map(l => l.filter(i => bIsOn(card, m, i)).length)), L[0].length];
+// the squares that matter for the win target (null = any line)
+function bPattern(len, win = bWin()){
+  const n = Math.round(Math.sqrt(len));
+  if (win === 'corners') return [0, n - 1, n * (n - 1), n * n - 1];
+  if (win === 'x') return [...new Set([...Array(n)].flatMap((_, i) => [i * n + i, i * n + (n - 1 - i)]))];
+  if (win === 'full') return [...Array(len).keys()];
+  return null;
 }
-const bWon = uid => { const [b, n] = bBest(uid); return n > 0 && b >= n; };
+// progress toward the win target: [have, need]
+function bProgress(ow, marksOverride){
+  const card = bCard(ow), m = marksOverride || bMarks(ow); if (!card.length) return [0, 0];
+  const on = i => bIsOn(card, m, i), win = bWin(), pat = bPattern(card.length, win);
+  if (pat) return [pat.filter(on).length, pat.length];
+  const L = bLines(card.length).map(l => l.filter(on).length).sort((a, b) => b - a), n = bLines(card.length)[0].length;
+  return win === 'lines2' ? [L[0] + L[1], 2 * n] : [L[0], n];
+}
+const bWon = (ow, m) => { const [h, n] = bProgress(ow, m); return n > 0 && h >= n; };
+const bProgLbl = ow => { const [h, n] = bProgress(ow); return `${h}/${n} ${BWINS[bWin()].lbl}`; };
 const bVal = (cat, v) => v == null || v === '' ? '—' : cat?.k === 'decade' ? `${v}s` : cat?.k === 'pre2000' ? (v === 'yes' ? 'Yes, before 2000' : 'No, 2000 or later') : String(v);
-// one card as a grid. opts: {tap: 'mark'|'erase', can: cat index that may be marked, mini, uid}
-function bCardHtml(uid, opts = {}){
-  const card = bCard(uid), m = bMarks(uid), cats = bCats(), n = Math.round(Math.sqrt(card.length)) || 1;
+// one card as a grid. opts: {tap: 'mark'|'erase', can: cat index that may be marked, mini}
+function bCardHtml(ow, opts = {}){
+  const card = bCard(ow), m = bMarks(ow), cats = bCats(), n = Math.round(Math.sqrt(card.length)) || 1, pat = new Set(bPattern(card.length) || []);
   return `<div class="bgrid ${opts.mini ? 'bmini' : ''}" style="--n:${n}">${card.map((c, i) => {
     const on = bIsOn(card, m, i), free = c === -1;
     const can = opts.tap === 'mark' ? !on && c === opts.can : opts.tap === 'erase' ? on && !free : false;
     const dim = opts.tap === 'mark' && !can && !on;
-    return `<${can ? 'button' : 'div'} class="bcell ${on ? 'on' : ''} ${free ? 'free' : ''} ${can ? 'can' : ''} ${dim ? 'dim' : ''}" style="--c:${free ? 'transparent' : BCOL[c] || '#888'}" ${can ? `data-b${opts.tap}="${i}" data-bu="${uid}"` : ''} title="${free ? 'Free square' : esc(cats[c]?.name || '')}">${free ? '🪩' : `<span class="ic">${cats[c]?.ic || ''}</span>`}</${can ? 'button' : 'div'}>`;
+    return `<${can ? 'button' : 'div'} class="bcell ${on ? 'on' : ''} ${free ? 'free' : ''} ${can ? 'can' : ''} ${dim ? 'dim' : ''} ${pat.has(i) ? 'pat' : ''}" style="--c:${free ? 'transparent' : BCOL[c] || '#888'}" ${can ? `data-b${opts.tap}="${i}" data-bu="${ow}"` : ''} title="${free ? 'Free square' : esc(cats[c]?.name || '')}">${free ? '🪩' : `<span class="ic">${cats[c]?.ic || ''}</span>`}</${can ? 'button' : 'div'}>`;
   }).join('')}</div>`;
 }
 const bLegend = () => bCats().map((c, i) => `<span class="bleg" style="--c:${BCOL[i]}"><i></i>${c.ic} ${esc(c.name)}</span>`).join('');
+const bOwnerHead = (ow, size) => (bTeamsOn() && String(ow).startsWith('t') ? bMembers(ow).map(u => avatar(players()[u], size)).join('') + `<span dir="auto">${esc(bTeam(ow).name)}</span>` : avatar(players()[ow], size) + `<span dir="auto">${esc(pname(ow))}</span>`);
 // ---- player pictures: an uploaded photo (small JPEG data URL) or one of 8 silhouettes ("s:0".."s:7") ----
 const AV_SHAPES = [
   '',                                                                                     // plain
@@ -667,7 +703,7 @@ setInterval(() => {
 let tbSpinN = -1;
 function renderBingoTV(){
   show('s-bingo'); stopOverview();
-  const r = room.round || {state: 'idle'}, cats = bCats(), cat = cats[r.cat], o = order(), act = active(), w = room.winner;
+  const r = room.round || {state: 'idle'}, cats = bCats(), cat = cats[r.cat], owners = bOwners(), act = active(), w = room.winner, tie = arr(room.bingo?.tie);
   // category
   const bc = $('#tbCat');
   if (r.state !== 'idle' && cat){
@@ -680,20 +716,20 @@ function renderBingoTV(){
   } else { bc.classList.add('idle'); bc.style.removeProperty('--c'); bc.innerHTML = '🎲'; }
   // status
   let status = '', sub = '';
-  const nAns = Object.keys(room.bingo?.answers || {}).length;
-  if (w){ status = `🎱 BINGO! ${esc(pname(w))} wins!`; }
-  else if (r.state === 'idle'){ status = `🎲 ${esc(pname(act))} spins the category`; sub = 'Get ready…'; }
+  const nAns = Object.keys(room.bingo?.answers || {}).length, nNeed = tie.length || owners.length;
+  if (w){ status = `🎱 BINGO! ${esc(bOwnerName(w))} wins!`; }
+  else if (r.state === 'idle'){ status = `🎲 ${esc(pname(act))} spins the category`; sub = tie.length ? `⚔ Sudden death: ${tie.map(o => esc(bOwnerName(o))).join(' & ')}` : 'Get ready…'; }
   else if (r.state === 'spun'){ status = `🎲 ${esc(pname(r.spinner))} spun ${esc(cat.name)}`; sub = 'The song is coming up…'; }
-  else if (r.state === 'playing'){ status = `🎵 ${esc(cat.hint)}`; sub = `${nAns} of ${o.length} answered on their phones`; }
-  else if (r.state === 'revealed'){ const k = Object.values(r.results || {}).filter(x => x.ok).length; status = `${k} of ${o.length} got it right`; sub = r.card ? `${esc(r.card.n)} · ${esc(r.card.a)} · ${esc(r.card.y)}` : ''; }
+  else if (r.state === 'playing'){ status = `🎵 ${esc(cat.hint)}`; sub = tie.length ? `⚔ Sudden death: ${tie.map(o => esc(bOwnerName(o))).join(' & ')}` : `${nAns} of ${nNeed} answered on their phones`; }
+  else if (r.state === 'revealed'){ const k = Object.values(r.results || {}).filter(x => x.ok).length; status = `${k} of ${Object.keys(r.results || {}).length} got it right`; sub = tie.length ? `⚔ Sudden death: ${tie.map(o => esc(bOwnerName(o))).join(' & ')}` : r.card ? `${esc(r.card.n)} · ${esc(r.card.a)} · ${esc(r.card.y)}` : ''; }
   $('#tbStatus').innerHTML = status; $('#tbSub').innerHTML = sub;
   // cards
-  $('#tbCards').innerHTML = o.map(u => { const p = players()[u], x = r.results?.[u], [b, n] = bBest(u);
-    const res = r.state === 'revealed' && x ? `<div class="res ${x.ok ? 'ok' : 'bad'}" dir="auto">${x.ok ? '✅' : '❌'} ${esc(bVal(cat, x.v))}${x.ex ? ' 💯' : ''}</div>` : r.state === 'playing' ? `<div class="res">${room.bingo?.answers?.[u] ? '✓ answered' : '…'}</div>` : '';
-    return `<div class="bpl ${u === act && !w ? 'turn' : ''}" style="--pc:${pcolor(u)}"><div class="nm">${avatar(p, '2.2vw')}<span dir="auto">${esc(p.name)}</span><span class="muted">${b}/${n}</span></div>${bCardHtml(u)}${res}</div>`; }).join('');
-  const rows = o.length <= 4 ? 1 : o.length <= 10 ? 2 : 3, cols = Math.ceil(Math.max(1, o.length) / rows);   // every card fits on screen
+  $('#tbCards').innerHTML = owners.map(ow => { const x = r.results?.[ow], [h, n] = bProgress(ow);
+    const res = r.state === 'revealed' && x ? `<div class="res ${x.ok ? 'ok' : 'bad'}" dir="auto">${x.ok ? '✅' : '❌'} ${esc(bVal(cat, x.v))}${x.ex ? ' 💯' : ''}</div>` : r.state === 'playing' && (!tie.length || tie.includes(ow)) ? `<div class="res">${room.bingo?.answers?.[ow] ? '✓ answered' : '…'}</div>` : '';
+    return `<div class="bpl ${bMembers(ow).includes(act) && !w ? 'turn' : ''} ${tie.includes(ow) ? 'tie' : ''}" style="--pc:${bOwnerColor(ow)}"><div class="nm">${bOwnerHead(ow, '2.2vw')}<span class="muted">${h}/${n}</span></div>${bCardHtml(ow)}${res}</div>`; }).join('');
+  const rows = owners.length <= 4 ? 1 : owners.length <= 10 ? 2 : 3, cols = Math.ceil(Math.max(1, owners.length) / rows);   // every card fits on screen
   $('#tbCards').style.gridTemplateColumns = `repeat(${cols}, min(calc((100vw - 4vw) / ${cols} - 1.4vw), calc((100vh - 21vw) / ${rows} - 7vw)))`;
-  $('#tbLegend').innerHTML = bLegend();
+  $('#tbLegend').innerHTML = bLegend() + `<span class="bleg">🏁 ${esc(BWINS[bWin()].name)}</span>`;
   // big moments
   if (w){ if (winShown !== w) bWinTV(w); }
   else if (r.state === 'revealed' && r.card && shownReveal !== r.n){ shownReveal = r.n; bRevealTV(r, cat); }
@@ -701,7 +737,7 @@ function renderBingoTV(){
 }
 async function bRevealTV(r, cat){
   const c = r.card, o = order();
-  const chips = o.map(u => { const x = r.results?.[u] || {}; return `<span style="color:${x.ok ? 'var(--ok)' : 'var(--bad)'}">${x.ok ? '✅' : '❌'} <span dir="auto">${esc(pname(u))}</span></span>`; }).join('');
+  const chips = Object.keys(r.results || {}).map(ow => { const x = r.results[ow] || {}; return `<span style="color:${x.ok ? 'var(--ok)' : 'var(--bad)'}">${x.ok ? '✅' : '❌'} <span dir="auto">${esc(bOwnerName(ow))}</span></span>`; }).join('');
   $('#overlay').innerHTML = `<div class="overlay" id="rv"><div class="reveal">${okUrl(c.c) ? `<img src="${esc(c.c)}" alt="">` : '<div class="nocv">💿</div>'}<div><div class="y">${esc(c.y)}</div><div class="t" dir="auto">${esc(c.n)}</div><div class="a" dir="auto">${esc(c.a)}</div><div class="out">${cat.ic} ${esc(cat.name)}</div><div class="bchips">${chips}</div><div class="fact hidden" id="rvFact"></div></div></div></div>`;
   const n = r.n;
   setTimeout(() => { if (shownReveal === n && room?.round?.n === n) clearOverlay(); }, 8000);
@@ -710,7 +746,7 @@ async function bRevealTV(r, cat){
 }
 function bWinTV(w){
   winShown = w;
-  $('#overlay').innerHTML = `<div class="overlay"><div class="win"><div class="trophy">🎱</div><div class="name" dir="auto">BINGO! ${esc(pname(w))} wins!</div><div style="max-width:24vw;margin:1.4vw auto 0">${bCardHtml(w)}</div></div></div>`;
+  $('#overlay').innerHTML = `<div class="overlay"><div class="win"><div class="trophy">🎱</div><div class="name" dir="auto">BINGO! ${esc(bOwnerName(w))} wins!</div><div style="max-width:24vw;margin:1.4vw auto 0">${bCardHtml(w)}</div></div></div>`;
   const colors = BCOL.concat(['#f97316']);
   for (let i = 0; i < 90; i++){
     const d = document.createElement('i'); d.className = 'confetti';
