@@ -311,7 +311,8 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
         <button class="mi hidden" id="tvBtn"><span class="ic">📺</span>TV mode</button>
         <button class="mi" id="tourBtn"><span class="ic">❓</span>How to play</button>
         <button class="mi" id="langBtn" data-notr><span class="ic">🌐</span><span id="langLbl">עברית</span></button>
-        <a class="mi" href="./"><span class="ic">🏠</span>Main page</a>
+        <a class="mi" href="discord.html" id="discordLink" target="_top"><span class="ic">🎥</span>Discord mode</a>
+        <a class="mi" href="./" target="_top"><span class="ic">🏠</span>Main page</a>
         <hr class="hidden" id="leaveSep">
         <button class="mi hidden" id="leaveBtn"><span class="ic">🚪</span>Leave room</button>
       </div>
@@ -419,18 +420,13 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
         <div class="seg2" data-ps="replays"><button data-v="inf">Unlimited</button><button data-v="0">None</button><button data-v="1">1</button><button data-v="2">2</button></div>
         <label class="muted row" style="margin:0;flex-wrap:nowrap"><input type="checkbox" data-ps="showTimer"> ⏱ Show the countdown on everyone's phone</label>
       </div>
-      <div class="streambox">
-        <label class="row" style="flex-wrap:nowrap;margin:0"><input type="checkbox" id="setStream"> <span>🎥 <b>Streaming mode</b> <span class="muted">· players watch your Discord stream</span></span></label>
-        <div id="streamSet" class="hidden">
+      <div class="streambox hidden">
+        <input type="checkbox" id="setStream" class="hidden">
+        <b>🎥 Discord stream</b>
+        <div id="streamSet">
           <div class="lbl" style="margin-top:8px">Stream delay: <b id="sdelayLbl"></b></div>
           <input type="range" id="sdelayR" min="0" max="8" step="1" style="width:100%;accent-color:var(--accent)">
           <p class="muted" style="font-size:12px;margin:2px 0 8px">How far your stream runs behind. Timers get this much extra time, and phones wait this long before showing the answer, so nobody sees it before the stream does.</p>
-          <ol class="streamsteps">
-            <li>On your computer, open the TV view: ☰ → 📺 TV mode → <b>Open on this device</b>. Log in to Spotify on the main page of that computer first.</li>
-            <li>In the TV view, click <b>🔊 Play music here</b>.</li>
-            <li>In Discord, share <b>that browser window</b> with sound on.</li>
-            <li>Send everyone the invite: <button class="btn secondary sm" id="copyInvite">💬 Copy invite for Discord</button></li>
-          </ol>
           <p class="muted" id="streamDevInfo" style="font-size:12px;margin:6px 0 0"></p>
         </div>
       </div>
@@ -1327,7 +1323,7 @@ $('#createBtn').onclick = async () => {
       try { await fb.set(R('host'), me); ok = true; } catch(e){ if (i === 5) throw e; }
     }
     const now = Date.now();
-    await fb.update(R(), {created: now, state: 'lobby', settings: {target: 10, tokens: 2, shuffle: true, welcome: store.get('party_welcome') || null, playStart: store.get('start_at') || '0', playLen: +(store.get('play_for') ?? 13), shrink: false, replays: 'inf', showTimer: true}, [`players/${me}`]: {name: myName(), joined: now, online: true, color: themeNow().accent, pic: myPic()}});
+    await fb.update(R(), {created: now, state: 'lobby', settings: {stream: DISCORD || null, sdelay: 3, target: 10, tokens: 2, shuffle: true, welcome: store.get('party_welcome') || null, playStart: store.get('start_at') || '0', playLen: +(store.get('play_for') ?? 13), shrink: false, replays: 'inf', showTimer: true}, [`players/${me}`]: {name: myName(), joined: now, online: true, color: themeNow().accent, pic: myPic()}});
     enterRoom(code);
   } catch(e){ msg('Couldn\'t create the room: ' + esc(e.message) + '. Check the database rules and that Anonymous sign-in is enabled (README).'); }
   $('#createBtn').disabled = false;
@@ -1362,7 +1358,7 @@ function enterRoom(c){
     if (room.players?.[me] && room.players[me].online === false) fb.set(R(`players/${me}/online`), true).catch(() => {});
     render();
   }, err => msg('Connection error: ' + esc(err.message)));
-  $('#histBtn').classList.remove('hidden'); $('#leaveBtn').classList.remove('hidden'); $('#leaveSep').classList.remove('hidden'); $('#tvBtn').classList.remove('hidden'); $('#shareBtn').classList.remove('hidden'); $('#inviteBtn').classList.remove('hidden');
+  $('#histBtn').classList.remove('hidden'); $('#leaveBtn').classList.remove('hidden'); $('#leaveSep').classList.remove('hidden'); $('#tvBtn').classList.remove('hidden'); $('#shareBtn').classList.remove('hidden'); $('#inviteBtn').classList.toggle('hidden', !DISCORD);
   if (!store.get('tour_v1')) setTimeout(openTour, 400);
 }
 function leave(){
@@ -1384,6 +1380,8 @@ $('#leaveBtn').onclick = async () => {
 const streamOn = () => !!room?.settings?.stream;
 const streamDelay = () => streamOn() ? Math.max(0, Math.min(8, +(room.settings.sdelay ?? 3))) : 0;
 const STREAM_DEV = 'SongLine Stream';
+// Discord mode = this page running inside discord.html (the host console on a computer). Streaming options live only there.
+const DISCORD = (() => { try { return new URLSearchParams(location.search).get('discord') === '1' || (window.top !== window && /discord\.html$/.test(window.top.location.pathname)); } catch(e){ return false; } })();
 let holdSeen = {}, holdT = null;
 // phones wait for the stream before showing an answer (the host's phone runs the game, so it never waits)
 function streamHolding(){
@@ -1405,6 +1403,9 @@ function streamHold(){
   holdT = setTimeout(streamHold, 200);
 }
 function renderStreamLobby(){
+  $('.streambox').classList.toggle('hidden', !DISCORD);
+  if (!DISCORD) return;
+  if (isHost() && !streamOn() && !streamForcing){ streamForcing = true; fb.set(R('settings/stream'), true).finally(() => { streamForcing = false; }); }
   const on = streamOn();
   $('#setStream').checked = on;
   $('#streamSet').classList.toggle('hidden', !on);
@@ -1412,19 +1413,23 @@ function renderStreamLobby(){
   if (document.activeElement !== $('#sdelayR')) $('#sdelayR').value = streamDelay();
   if (on && isHost()){
     const has = [...$('#device').options].some(o => o.textContent.startsWith(STREAM_DEV));
+    if (!streamDevPoll){ streamDevPoll = setInterval(() => { if (room?.state === 'lobby' && isHost()) loadDevices().then(render); }, 8000); }
     $('#streamDevInfo').textContent = has ? '✓ The TV view is ready to play the music.' : 'Waiting for 🔊 Play music here in the TV view… (tap ↻ next to the device list to check again)';
   }
 }
 $('#setStream').onchange = e => { fb.set(R('settings/stream'), e.target.checked || null); if (e.target.checked){ loadDevices(); clearInterval(streamDevPoll); streamDevPoll = setInterval(() => { if (streamOn() && room?.state === 'lobby') loadDevices().then(render); else clearInterval(streamDevPoll); }, 8000); } };
-let streamDevPoll = null;
+let streamDevPoll = null, streamForcing = false;
 $('#sdelayR').oninput = e => { $('#sdelayLbl').textContent = e.target.value + ' s'; };
 $('#sdelayR').onchange = e => fb.set(R('settings/sdelay'), +e.target.value);
+const inviteText = () => code ? `🎵 SongLine time! Open this on your phone to join: ${BASE}party.html?room=${code}${shareCfg()}\nRoom code: ${code}. The music and the board are on my stream.` : '';
+window.SongLineInviteText = inviteText;
 async function copyInvite(){
-  const link = `${BASE}party.html?room=${code}${shareCfg()}`;
-  const text = `🎵 SongLine time! Open this on your phone to join: ${link}\nRoom code: ${code}. The music and the board are on my stream.`;
+  const text = inviteText();
   try { await navigator.clipboard.writeText(text); toast('Invite copied. Paste it in the Discord chat'); } catch(e){ prompt('Copy this invite:', text); }
 }
-$('#copyInvite').onclick = copyInvite; $('#inviteBtn').onclick = copyInvite;
+$('#inviteBtn').onclick = copyInvite;
+if (DISCORD){ $('#discordLink').classList.add('hidden'); document.body.classList.add('discord'); const pl = document.querySelector('header .pill'); if (pl) pl.textContent = 'DISCORD'; }
+window.SongLineCopyInvite = copyInvite;
 
 // ================= share join link =================
 $('#shareBtn').onclick = async () => {

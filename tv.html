@@ -127,6 +127,7 @@ html[dir=rtl] .btimer i{inset:0 0 0 auto}
 .streamsetup ol{margin:.6vw 0;padding-inline-start:1.6vw}.streamsetup li{margin:.3vw 0}
 body.streamer .qr{display:none!important}
 body.streamer .joinbox .code{font-size:3vw}
+html.tvpreview .tvbtns,html.tvpreview .musicbox,html.tvpreview .streamsetup{display:none!important}
 .overlay{position:fixed;inset:0;background:rgba(8,6,14,.82);display:flex;align-items:center;justify-content:center;z-index:20;animation:fade .3s}
 .reveal{display:grid;grid-template-columns:auto 1fr;gap:3vw;align-items:center;max-width:80vw;animation:pop .6s cubic-bezier(.2,.8,.3,1.2)}
 .reveal img,.reveal .nocv{width:28vw;height:28vw;border-radius:1.6vw;object-fit:cover;box-shadow:0 2vw 5vw rgba(0,0,0,.6);background:var(--line);display:flex;align-items:center;justify-content:center;font-size:10vw}
@@ -243,7 +244,7 @@ body.light .card .nocv{background:#e2ddef}
 </div>
 
 <div class="musicbox idle-hide hidden" id="musicBox"><div id="musicMsg"></div><label class="vol hidden" id="volRow">🔈 <input type="range" id="volR" min="0" max="100" value="80"></label></div>
-<div class="streamsetup hidden" id="streamSetup"><b>🎥 Streaming setup</b><ol><li>Click <b>🔊 Play music here</b> (bottom right).</li><li>On the host phone, the device <b>SongLine Stream</b> gets picked by itself (tap ↻ if not).</li><li>In Discord, share <b>this window</b> with sound on.</li></ol><div class="muted">This box hides once the music player is ready.</div></div>
+<div class="streamsetup hidden" id="streamSetup"><b>🎥 Streaming setup</b><ol><li>Click <b>🔊 Play music here</b> (bottom right).</li><li>The host controls pick the device <b>SongLine Stream</b> by themselves (tap ↻ there if not).</li><li>In Discord, share <b>this window</b> (called SongLine Stream) with sound on.</li></ol><div class="muted">This box hides once the music player is ready.</div></div>
 <div id="overlay"></div>
 <div class="tvbtns" id="tvBtns"><button class="btn ghost" id="themeBtn">🎨 Colors</button><button class="btn ghost" id="fsBtn">⛶ Full screen</button><button class="btn ghost" id="musicBtn">🔊 Play music here</button><button class="btn ghost" id="langBtn" data-notr>🌐 <span id="langLbl">עברית</span></button></div>
 <div class="modal hidden" id="themeModal">
@@ -525,7 +526,7 @@ async function start(){
 function watch(c){
   code = c.trim().toUpperCase();
   if (!/^[A-Z0-9]{4}$/.test(code)){ $('#setupMsg').textContent = 'Room codes are 4 letters/numbers.'; return; }
-  history.replaceState(null, '', location.pathname + '?room=' + code + (new URLSearchParams(location.search).get('cfg') ? '&cfg=' + new URLSearchParams(location.search).get('cfg') : ''));
+  { const q = new URLSearchParams(location.search); history.replaceState(null, '', location.pathname + '?room=' + code + (q.get('cfg') ? '&cfg=' + q.get('cfg') : '') + (q.get('stream') ? '&stream=1' : '') + (q.get('preview') ? '&preview=1' : '')); }
   if (unsub) unsub();
   unsub = fb.onValue(R(), s => {
     room = s.val();
@@ -539,6 +540,11 @@ $('#fsBtn').onclick = () => { (document.documentElement.requestFullscreen?.() ||
 document.addEventListener('fullscreenchange', () => $('#fsBtn').classList.toggle('hidden', !!document.fullscreenElement));
 // the buttons fade away when the mouse/remote is idle, so they don't sit on the TV picture
 let idleT = null, spPlayer = null, musicState = 'off', musicT = null;
+// ?preview=1: the small live preview inside discord.html (no buttons, no music) · ?stream=1: the window you share
+const TV_Q = new URLSearchParams(location.search), TV_PREVIEW = TV_Q.get('preview') === '1', TV_STREAM = TV_Q.get('stream') === '1';
+if (TV_PREVIEW) document.documentElement.classList.add('tvpreview');
+if (TV_STREAM) document.title = 'SongLine Stream';
+const tvChan = (() => { try { return new BroadcastChannel('songline'); } catch(e){ return null; } })();
 function wakeButtons(){ $('#musicBox').classList.remove('idle'); $('#tvBtns').classList.remove('idle'); clearTimeout(idleT); idleT = setTimeout(() => { if ($('#themeModal').classList.contains('hidden')){ $('#tvBtns').classList.add('idle'); if (musicState === 'ready') $('#musicBox').classList.add('idle'); } }, 5000); }
 ['mousemove', 'keydown', 'touchstart', 'click'].forEach(ev => document.addEventListener(ev, wakeButtons));
 wakeButtons();
@@ -553,9 +559,10 @@ function render(){
   if (link !== lastJoin){ lastJoin = link; qrInto($('#lbQr'), link); qrInto($('#gmQr'), link); qrInto($('#bgQr'), link); }
   $('#lbCode').textContent = code; $('#gmCode').textContent = code; $('#bgCode').textContent = code;
   const streamer = !!room.settings?.stream;
+  $('#musicBtn').classList.toggle('hidden', !streamer && musicState !== 'ready' || TV_PREVIEW);
   document.body.classList.toggle('streamer', streamer);
   $('#lbJoinHint').textContent = streamer ? 'Join with the link in the chat, or open the site and enter the code' : 'Scan to join, or enter the code';
-  $('#streamSetup').classList.toggle('hidden', !streamer || musicState === 'ready');
+  $('#streamSetup').classList.toggle('hidden', !streamer || musicState === 'ready' || TV_PREVIEW);
   if (room.state === 'lobby') renderLobby(); else if (isBingo()) renderBingoTV(); else renderGame();
 }
 function renderLobby(){
@@ -791,6 +798,7 @@ async function spToken(){
 const PLAN_B = 'Plan B: play the music in the Spotify app on this computer, share your <b>whole screen</b> with sound in Discord, and keep the Spotify window out of sight so the song name never shows.';
 function setMusic(state, html){
   musicState = state; clearTimeout(musicT);
+  try { tvChan?.postMessage({type: 'music', state, text: html.replace(/<[^>]+>/g, '')}); } catch(e){}
   $('#musicBox').classList.remove('hidden');
   $('#musicMsg').innerHTML = html;
   $('#volRow').classList.toggle('hidden', state !== 'ready');

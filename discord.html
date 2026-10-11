@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script src="i18n.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SongLine · Discord mode</title>
+<style>
+:root{--bg:#120f1d;--panel:#1d1930;--line:#2e2946;--text:#f3f0ff;--muted:#a59fc4;--accent:#ff3d8b;--accent2:#3fd7f2;--ok:#3ddc84;--btn2:#26213b}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line)}
+.logo{font-weight:900;font-size:20px;color:var(--text);text-decoration:none}.logo span{color:var(--accent)}
+.pill{background:#5865f2;color:#fff;border-radius:99px;padding:2px 10px;font-size:12px;font-weight:800}
+.room{font:800 15px ui-monospace,Menlo,monospace;letter-spacing:2px;color:var(--accent2)}
+header .sp{flex:1}
+header a.lnk{color:var(--muted);font-size:13px}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:12px 16px}
+.step{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 12px;font-size:13px;color:var(--muted)}
+.step.done{border-color:var(--ok)}
+.step .n{display:inline-flex;width:22px;height:22px;border-radius:50%;background:var(--btn2);color:var(--text);align-items:center;justify-content:center;font-weight:800;margin-inline-end:6px}
+.step.done .n{background:var(--ok);color:#10261a}
+.step b{color:var(--text)}
+.step .st{display:block;margin-top:6px;font-size:12px}
+.btn{border:0;border-radius:10px;padding:8px 12px;font:inherit;font-weight:800;background:var(--accent);color:#fff;cursor:pointer;margin-top:6px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sec{background:var(--btn2);color:var(--text)}
+main{display:grid;grid-template-columns:440px 1fr;gap:16px;padding:0 16px 16px;height:calc(100vh - 190px);min-height:480px}
+.console{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--bg)}
+.console iframe{width:100%;height:100%;border:0;display:block}
+.preview{display:flex;flex-direction:column;gap:8px;min-width:0}
+.pvhead{font-weight:800}.pvhead .muted{font-weight:400}
+.muted{color:var(--muted)}
+.pvbox{position:relative;width:100%;aspect-ratio:16/9;max-height:100%;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#000}
+.pvbox iframe{position:absolute;inset:0;width:100%;height:100%;border:0;pointer-events:none}
+.pvempty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);text-align:center;padding:24px}
+.tips{font-size:13px;color:var(--muted);margin:0}
+.tips li{margin:3px 0}
+.toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);background:var(--accent);color:#fff;padding:8px 18px;border-radius:99px;font-weight:800;z-index:9}
+.hidden{display:none!important}
+@media (max-width:900px){.steps{grid-template-columns:1fr 1fr}main{grid-template-columns:1fr;height:auto}.console{height:80vh}}
+</style>
+</head>
+<body>
+<header>
+  <a class="logo" href="./">Song<span>Line</span></a><span class="pill">🎥 Discord mode</span>
+  <span class="muted" id="roomLbl">No room yet</span><span class="room" id="roomCode"></span>
+  <span class="sp"></span>
+  <a class="lnk" href="party.html">Normal online mode</a><a class="lnk" href="./">Main page</a>
+</header>
+<div class="steps">
+  <div class="step" id="st1"><span class="n">1</span><b>Create the room</b> in the host controls on the left. Log in to Spotify on the main page of this computer first.</div>
+  <div class="step" id="st2"><span class="n">2</span><b>Open the stream window</b> and click 🔊 Play music here in it.<br><button class="btn" id="openStream" disabled>🖥 Open stream window</button><span class="st" id="musicSt"></span></div>
+  <div class="step" id="st3"><span class="n">3</span><b>In Discord:</b> Share Screen → choose the window <b>SongLine Stream</b> and turn sound on.</div>
+  <div class="step" id="st4"><span class="n">4</span><b>Invite your friends:</b> they join on their phones.<br><button class="btn sec" id="invite" disabled>💬 Copy invite</button></div>
+</div>
+<main>
+  <section class="console"><iframe id="host" src="party.html?discord=1" title="Host controls" allow="camera; clipboard-write; autoplay; screen-wake-lock"></iframe></section>
+  <section class="preview">
+    <div class="pvhead">What your stream shows <span class="muted">· live preview, no sound</span></div>
+    <div class="pvbox"><iframe id="pv" title="Stream preview" tabindex="-1"></iframe><div class="pvempty" id="pvEmpty">Create a room on the left to see the stream preview.</div></div>
+    <ul class="tips">
+      <li>Share only the <b>SongLine Stream</b> window, not this page: the host controls show the song name after each reveal.</li>
+      <li>Players hear the music through your stream, so leave Discord's stream sound on and the volume up in the stream window.</li>
+      <li>Set the <b>stream delay</b> in the host controls so phones don't show answers before the stream does.</li>
+    </ul>
+  </section>
+</main>
+<div class="toast hidden" id="toast"></div>
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const host = $('#host'), pv = $('#pv');
+  let code = null, music = 'off', streamWin = null, toastT = null;
+  const toast = t => { const el = $('#toast'); el.textContent = t; el.classList.remove('hidden'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.add('hidden'), 2600); };
+  const tr = s => (window.SL_I18N ? SL_I18N.t(s) : s);
+  // follow the host controls: which room is open?
+  setInterval(() => {
+    let c = null;
+    try { c = host.contentWindow?.SongLineParty?.state()?.code || null; } catch(e){}
+    if (c === code) return;
+    code = c;
+    $('#roomCode').textContent = code || '';
+    $('#roomLbl').textContent = tr(code ? 'Room' : 'No room yet');
+    $('#openStream').disabled = $('#invite').disabled = !code;
+    $('#st1').classList.toggle('done', !!code);
+    pv.src = code ? `tv.html?room=${code}&preview=1` : 'about:blank';
+    $('#pvEmpty').classList.toggle('hidden', !!code);
+  }, 700);
+  $('#openStream').onclick = () => {
+    if (!code) return;
+    streamWin = window.open(`tv.html?room=${code}&stream=1`, 'songline_stream', 'popup,width=1280,height=760');
+    if (!streamWin) toast(tr('Your browser blocked the window. Allow pop-ups for this site and try again.'));
+  };
+  $('#invite').onclick = async () => {
+    let text = '';
+    try { text = host.contentWindow.SongLineInviteText(); } catch(e){}
+    if (!text) return;
+    try { await navigator.clipboard.writeText(text); toast(tr('Invite copied. Paste it in the Discord chat')); } catch(e){ prompt(tr('Copy this invite:'), text); }
+    $('#st4').classList.add('done');
+  };
+  // the stream window reports its music player
+  try {
+    new BroadcastChannel('songline').onmessage = e => {
+      if (e.data?.type !== 'music') return;
+      music = e.data.state;
+      $('#musicSt').textContent = music === 'ready' ? tr('✓ Music is ready in the stream window.') : music === 'loading' ? tr('Starting the music player…') : e.data.text || '';
+      $('#st2').classList.toggle('done', music === 'ready');
+    };
+  } catch(e){}
+})();
+</script>
+</body>
+</html>
