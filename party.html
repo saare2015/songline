@@ -160,6 +160,10 @@ html[dir=rtl] .btimer i{inset:0 0 0 auto}
 .modepick label:has(input:checked){border-color:var(--accent)}
 .modepick input{display:none}
 .modepick .muted{font-weight:400;font-size:12px}
+.streambox{background:var(--btn2);border-radius:12px;padding:10px 12px;margin:12px 0}
+.streamsteps{margin:4px 0 0;padding-inline-start:20px;font-size:13px;color:var(--muted)}.streamsteps li{margin:4px 0}.streamsteps b{color:var(--text)}
+.streamhold{position:fixed;inset:0;z-index:40;background:var(--bg);display:flex;align-items:center;justify-content:center;text-align:center;padding:24px}
+.streamhold .big{font-size:26px;font-weight:900;margin:8px 0}.streamhold b{color:var(--accent2)}
 .modal{position:fixed;inset:0;background:rgba(10,8,18,.8);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
 .modal-box{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:20px;max-width:420px;width:100%;max-height:88vh;overflow:auto}
 .hist{list-style:none;padding:0;margin:0}
@@ -296,13 +300,14 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
 <body>
 <div class="app">
   <header>
-    <a class="logo" href="./">Song<span>Line</span></a><span class="pill">ONLINE</span><span class="muted" style="font-size:11px" title="All phones should show the same version">v26</span>
+    <a class="logo" href="./">Song<span>Line</span></a><span class="pill">ONLINE</span><span class="muted" style="font-size:11px" title="All phones should show the same version">v27</span>
     <nav>
       <button class="burger" id="menuBtn" aria-label="Menu" aria-expanded="false">☰</button>
       <div class="menu hidden" id="menu">
         <button class="mi hidden" id="histBtn"><span class="ic">📜</span>History</button>
         <button class="mi" id="themeBtn"><span class="ic">🎨</span>Look &amp; feel</button>
         <button class="mi hidden" id="shareBtn"><span class="ic">📤</span>Share join link</button>
+        <button class="mi hidden" id="inviteBtn"><span class="ic">💬</span>Copy Discord invite</button>
         <button class="mi hidden" id="tvBtn"><span class="ic">📺</span>TV mode</button>
         <button class="mi" id="tourBtn"><span class="ic">❓</span>How to play</button>
         <button class="mi" id="langBtn" data-notr><span class="ic">🌐</span><span id="langLbl">עברית</span></button>
@@ -413,6 +418,21 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
         <div class="lbl">Replays per song</div>
         <div class="seg2" data-ps="replays"><button data-v="inf">Unlimited</button><button data-v="0">None</button><button data-v="1">1</button><button data-v="2">2</button></div>
         <label class="muted row" style="margin:0;flex-wrap:nowrap"><input type="checkbox" data-ps="showTimer"> ⏱ Show the countdown on everyone's phone</label>
+      </div>
+      <div class="streambox">
+        <label class="row" style="flex-wrap:nowrap;margin:0"><input type="checkbox" id="setStream"> <span>🎥 <b>Streaming mode</b> <span class="muted">· players watch your Discord stream</span></span></label>
+        <div id="streamSet" class="hidden">
+          <div class="lbl" style="margin-top:8px">Stream delay: <b id="sdelayLbl"></b></div>
+          <input type="range" id="sdelayR" min="0" max="8" step="1" style="width:100%;accent-color:var(--accent)">
+          <p class="muted" style="font-size:12px;margin:2px 0 8px">How far your stream runs behind. Timers get this much extra time, and phones wait this long before showing the answer, so nobody sees it before the stream does.</p>
+          <ol class="streamsteps">
+            <li>On your computer, open the TV view: ☰ → 📺 TV mode → <b>Open on this device</b>. Log in to Spotify on the main page of that computer first.</li>
+            <li>In the TV view, click <b>🔊 Play music here</b>.</li>
+            <li>In Discord, share <b>that browser window</b> with sound on.</li>
+            <li>Send everyone the invite: <button class="btn secondary sm" id="copyInvite">💬 Copy invite for Discord</button></li>
+          </ol>
+          <p class="muted" id="streamDevInfo" style="font-size:12px;margin:6px 0 0"></p>
+        </div>
       </div>
       <div class="srcbox">
         <b>Songs</b>
@@ -674,6 +694,7 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
 
 <div class="netbar hidden" id="netbar"></div>
 <div class="toast hidden" id="toast"></div>
+<div class="streamhold hidden" id="streamHold"><div><div style="font-size:56px">🎬</div><div class="big">Reveal on the stream in <b id="streamHoldN">3</b>…</div><div class="muted">Watch the stream so you see it at the same time as everyone else.</div></div></div>
 
 <div class="modal hidden" id="avModal">
   <div class="modal-box" style="text-align:center">
@@ -1138,7 +1159,7 @@ async function spRefresh(){
   try {
     const r = await fetch('https://accounts.spotify.com/api/token', {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: new URLSearchParams({client_id: clientId(), grant_type: 'refresh_token', refresh_token: rt})});
     const t = await r.json(); if (!t.access_token) return false;
-    store.set('access_token', t.access_token); if (t.refresh_token) store.set('refresh_token', t.refresh_token);
+    store.set('access_token', t.access_token); if (t.refresh_token) store.set('refresh_token', t.refresh_token); if (t.scope) store.set('sp_scope', t.scope);
     store.set('expires_at', String(Date.now() + (t.expires_in - 60) * 1000)); return true;
   } catch(e){ return false; }
 }
@@ -1158,7 +1179,7 @@ async function loadDevices(){
     const d = await sp('/me/player/devices'); const list = d?.devices || [];
     const saved = store.get('device_id');
     $('#device').innerHTML = list.length ? list.map(x => `<option value="${esc(x.id)}">${esc(x.name)} (${esc(x.type)})</option>`).join('') : '<option value="">No Spotify device. Open Spotify, play something, then tap ↻</option>';
-    const pick = list.find(x => x.id === saved) || list.find(x => x.type === 'Smartphone') || list.find(x => x.is_active) || list[0];
+    const pick = (streamOn() && list.find(x => x.name === STREAM_DEV)) || list.find(x => x.id === saved) || list.find(x => x.type === 'Smartphone') || list.find(x => x.is_active) || list[0];
     if (pick){ $('#device').value = pick.id; store.set('device_id', pick.id); }
   } catch(e){ msg('Spotify: ' + esc(e.message)); }
 }
@@ -1199,7 +1220,7 @@ async function playId(id){
       await sleep(200);
     }
     const end = Date.now() + lim;
-    if (ps().showTimer) fb.update(R(), {'round/until': end, 'round/clip': lim, 'round/timeup': null}).catch(() => {});
+    if (ps().showTimer) fb.update(R(), {'round/until': end + streamDelay() * 1000, 'round/clip': lim, 'round/timeup': null}).catch(() => {});
     timer = setInterval(async () => {
       if (gen !== playGen){ clearInterval(timer); return; }
       const left = end - Date.now();
@@ -1341,13 +1362,13 @@ function enterRoom(c){
     if (room.players?.[me] && room.players[me].online === false) fb.set(R(`players/${me}/online`), true).catch(() => {});
     render();
   }, err => msg('Connection error: ' + esc(err.message)));
-  $('#histBtn').classList.remove('hidden'); $('#leaveBtn').classList.remove('hidden'); $('#leaveSep').classList.remove('hidden'); $('#tvBtn').classList.remove('hidden'); $('#shareBtn').classList.remove('hidden');
+  $('#histBtn').classList.remove('hidden'); $('#leaveBtn').classList.remove('hidden'); $('#leaveSep').classList.remove('hidden'); $('#tvBtn').classList.remove('hidden'); $('#shareBtn').classList.remove('hidden'); $('#inviteBtn').classList.remove('hidden');
   if (!store.get('tour_v1')) setTimeout(openTour, 400);
 }
 function leave(){
   if (unsub){ unsub(); unsub = null; }
   stopScan(); room = null; code = null; store.del('party_room');
-  $('#histBtn').classList.add('hidden'); $('#leaveBtn').classList.add('hidden'); $('#leaveSep').classList.add('hidden'); $('#tvBtn').classList.add('hidden'); $('#shareBtn').classList.add('hidden');
+  $('#histBtn').classList.add('hidden'); $('#leaveBtn').classList.add('hidden'); $('#leaveSep').classList.add('hidden'); $('#tvBtn').classList.add('hidden'); $('#shareBtn').classList.add('hidden'); $('#inviteBtn').classList.add('hidden');
   history.replaceState(null, '', location.pathname); show('s-home');
 }
 $('#leaveBtn').onclick = async () => {
@@ -1357,6 +1378,53 @@ $('#leaveBtn').onclick = async () => {
   }
   await fb.set(R(`players/${me}/online`), false).catch(() => {}); leave();
 };
+
+
+// ================= streaming mode (Discord etc.) =================
+const streamOn = () => !!room?.settings?.stream;
+const streamDelay = () => streamOn() ? Math.max(0, Math.min(8, +(room.settings.sdelay ?? 3))) : 0;
+const STREAM_DEV = 'SongLine Stream';
+let holdSeen = {}, holdT = null;
+// phones wait for the stream before showing an answer (the host's phone runs the game, so it never waits)
+function streamHolding(){
+  const r = room?.round, D = streamDelay();
+  if (!D || isHost() || room?.state !== 'game' || r?.state !== 'revealed') return false;
+  const key = `${r.n || 0}|${isBingo() ? 'b' : 't'}`;
+  if (!holdSeen[key]) holdSeen[key] = Date.now();
+  return Date.now() < holdSeen[key] + D * 1000;
+}
+function streamHold(){
+  const r = room?.round, D = streamDelay(), el = $('#streamHold');
+  clearTimeout(holdT);
+  if (!D || isHost() || room?.state !== 'game' || r?.state !== 'revealed'){ el.classList.add('hidden'); return; }
+  const key = `${r.n || 0}|${isBingo() ? 'b' : 't'}`;
+  if (!holdSeen[key]) holdSeen[key] = Date.now();
+  const left = holdSeen[key] + D * 1000 - Date.now();
+  if (left <= 0){ if (!el.classList.contains('hidden')){ el.classList.add('hidden'); render(); } return; }
+  el.classList.remove('hidden'); $('#streamHoldN').textContent = Math.ceil(left / 1000);
+  holdT = setTimeout(streamHold, 200);
+}
+function renderStreamLobby(){
+  const on = streamOn();
+  $('#setStream').checked = on;
+  $('#streamSet').classList.toggle('hidden', !on);
+  $('#sdelayLbl').textContent = streamDelay() + ' s';
+  if (document.activeElement !== $('#sdelayR')) $('#sdelayR').value = streamDelay();
+  if (on && isHost()){
+    const has = [...$('#device').options].some(o => o.textContent.startsWith(STREAM_DEV));
+    $('#streamDevInfo').textContent = has ? '✓ The TV view is ready to play the music.' : 'Waiting for 🔊 Play music here in the TV view… (tap ↻ next to the device list to check again)';
+  }
+}
+$('#setStream').onchange = e => { fb.set(R('settings/stream'), e.target.checked || null); if (e.target.checked){ loadDevices(); clearInterval(streamDevPoll); streamDevPoll = setInterval(() => { if (streamOn() && room?.state === 'lobby') loadDevices().then(render); else clearInterval(streamDevPoll); }, 8000); } };
+let streamDevPoll = null;
+$('#sdelayR').oninput = e => { $('#sdelayLbl').textContent = e.target.value + ' s'; };
+$('#sdelayR').onchange = e => fb.set(R('settings/sdelay'), +e.target.value);
+async function copyInvite(){
+  const link = `${BASE}party.html?room=${code}${shareCfg()}`;
+  const text = `🎵 SongLine time! Open this on your phone to join: ${link}\nRoom code: ${code}. The music and the board are on my stream.`;
+  try { await navigator.clipboard.writeText(text); toast('Invite copied. Paste it in the Discord chat'); } catch(e){ prompt('Copy this invite:', text); }
+}
+$('#copyInvite').onclick = copyInvite; $('#inviteBtn').onclick = copyInvite;
 
 // ================= share join link =================
 $('#shareBtn').onclick = async () => {
@@ -1453,6 +1521,7 @@ function renderNow(){
   $('#clipInfo').textContent = room.state === 'game' ? clipSummary() : '';
   if (isHost()) renderReplayBtn();
   if (room.state === 'lobby') renderLobby(); else if (isBingo()) renderBingo(); else renderGame();
+  streamHold();
   if (!$('#histModal').classList.contains('hidden')) renderHist();
 }
 function renderLobby(){
@@ -1462,6 +1531,7 @@ function renderLobby(){
   if (window.qrcode){ const q = qrcode(0, 'L'); q.addData(link); q.make(); $('#lobQr').innerHTML = q.createSvgTag(4, 0); }
   const ps = Object.entries(players()).sort((a, b) => a[1].joined - b[1].joined);
   $('#lobCount').textContent = `(${ps.length})`;
+  renderStreamLobby();
   const teamChip = bLobbyTeams();
   $('#lobPlayers').innerHTML = ps.map(([u, p]) => `<li style="align-items:center">${u === me ? `<button data-avme style="background:none;border:0;padding:0;cursor:pointer" title="Change your picture">${avatar(p, '34px')}</button>` : avatar(p, '34px')}<span class="dot ${p.online === false ? 'off' : ''}"></span><span style="flex:1">${esc(p.name)}${u === room.host ? ' 👑' : ''}${u === me ? ' <span class="muted">(you)</span>' : ''}</span>${teamChip(u)}${isHost() && u !== me ? `<button class="btn ghost sm" data-kick="${u}">✕</button>` : ''}</li>`).join('');
   const wm = (room.settings?.welcome || '').trim();
@@ -2387,7 +2457,7 @@ async function bStartSong(ans){
   enrich(ans).then(x => { if (answer && answer.id === x.id){ answer = x; store.set('party_answer', JSON.stringify(answer)); } });
   used.add(ans.id); store.set('party_used', JSON.stringify([...used]));
   const now = Date.now();
-  await fb.update(R(), {'round/state': 'playing', 'round/started': now, 'round/deadline': now + bTime() * 1000, 'round/results': null, 'round/card': null, 'bingo/answers': null});
+  await fb.update(R(), {'round/state': 'playing', 'round/started': now, 'round/deadline': now + (bTime() + streamDelay()) * 1000, 'round/results': null, 'round/card': null, 'bingo/answers': null});
   try { await playId(ans.id); } catch(e){ songError(e); }
 }
 // who answers this round: everyone, or only the tied players in sudden death
@@ -2502,7 +2572,7 @@ function bTick(){
   if (!room || room.state !== 'game' || !isBingo()){ clearInterval(bTickT); bTickT = null; return; }
   const r = room.round || {};
   if (r.state === 'playing'){
-    const left = Math.max(0, (r.deadline || 0) - Date.now()), T = bTime() * 1000;
+    const left = Math.max(0, (r.deadline || 0) - Date.now()), T = Math.max(1000, (r.deadline || 0) - (r.started || 0)) || bTime() * 1000;
     $('#bTimer').classList.remove('hidden');
     $('#bTimer i').style.width = (left / T * 100).toFixed(1) + '%';
     $('#bTimer span').textContent = Math.ceil(left / 1000) + ' s';
@@ -2618,6 +2688,7 @@ function renderBingo(){
   }
   // alerts
   const key = w ? '' : r.state === 'idle' && act === me ? 'spin' + r.n : r.state === 'playing' && myOw && bPlaying().includes(myOw) && !room.bingo?.answers?.[myOw] ? 'ans' + r.n : pend != null ? 'mark' + r.n : '';
+  if (streamHolding()) return bTick();                           // say nothing until the stream shows the answer
   if (key && key !== bLastAlert) alertMe(key.startsWith('spin') ? '🎲 Your spin!' : key.startsWith('ans') ? '🎵 Answer now!' : '✏ Cross off a square!');
   bLastAlert = key;
   bTick();

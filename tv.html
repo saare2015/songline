@@ -120,6 +120,13 @@ html[dir=rtl] .btimer i{inset:0 0 0 auto}
 .bleg{display:inline-flex;align-items:center;gap:.4vw}.bleg i{width:1vw;height:1vw;border-radius:.2vw;background:var(--c)}
 .bchips{display:flex;flex-wrap:wrap;gap:.8vw;margin-top:1.4vw}
 .bchips span{background:var(--panel);border-radius:99px;padding:.3vw 1vw;font-size:1.4vw;font-weight:800}
+.musicbox{position:fixed;inset-inline-start:1.2vw;bottom:1.2vw;z-index:30;background:var(--panel);border:1px solid var(--line);border-radius:1vw;padding:.7vw 1vw;font-size:1.1vw;max-width:40vw;transition:opacity .4s}
+.musicbox .vol{display:flex;align-items:center;gap:.6vw;margin-top:.5vw}.musicbox input{width:12vw;accent-color:var(--accent)}
+.idle-hide.idle{opacity:0;pointer-events:none}
+.streamsetup{position:fixed;inset-inline-start:1.2vw;bottom:6vw;z-index:25;background:var(--panel);border:2px solid var(--accent);border-radius:1.2vw;padding:1.2vw 1.6vw;font-size:1.3vw;max-width:34vw}
+.streamsetup ol{margin:.6vw 0;padding-inline-start:1.6vw}.streamsetup li{margin:.3vw 0}
+body.streamer .qr{display:none!important}
+body.streamer .joinbox .code{font-size:3vw}
 .overlay{position:fixed;inset:0;background:rgba(8,6,14,.82);display:flex;align-items:center;justify-content:center;z-index:20;animation:fade .3s}
 .reveal{display:grid;grid-template-columns:auto 1fr;gap:3vw;align-items:center;max-width:80vw;animation:pop .6s cubic-bezier(.2,.8,.3,1.2)}
 .reveal img,.reveal .nocv{width:28vw;height:28vw;border-radius:1.6vw;object-fit:cover;box-shadow:0 2vw 5vw rgba(0,0,0,.6);background:var(--line);display:flex;align-items:center;justify-content:center;font-size:10vw}
@@ -194,7 +201,7 @@ body.light .card .nocv{background:#e2ddef}
     </div>
     <div class="bigjoin">
       <div class="qr" id="lbQr"></div>
-      <div class="muted" style="font-size:1.6vw">Scan to join, or enter the code</div>
+      <div class="muted" id="lbJoinHint" style="font-size:1.6vw">Scan to join, or enter the code</div>
       <div class="code" id="lbCode"></div>
     </div>
   </div>
@@ -235,8 +242,10 @@ body.light .card .nocv{background:#e2ddef}
   <div class="blegend" id="tbLegend"></div>
 </div>
 
+<div class="musicbox idle-hide hidden" id="musicBox"><div id="musicMsg"></div><label class="vol hidden" id="volRow">🔈 <input type="range" id="volR" min="0" max="100" value="80"></label></div>
+<div class="streamsetup hidden" id="streamSetup"><b>🎥 Streaming setup</b><ol><li>Click <b>🔊 Play music here</b> (bottom right).</li><li>On the host phone, the device <b>SongLine Stream</b> gets picked by itself (tap ↻ if not).</li><li>In Discord, share <b>this window</b> with sound on.</li></ol><div class="muted">This box hides once the music player is ready.</div></div>
 <div id="overlay"></div>
-<div class="tvbtns" id="tvBtns"><button class="btn ghost" id="themeBtn">🎨 Colors</button><button class="btn ghost" id="fsBtn">⛶ Full screen</button><button class="btn ghost" id="langBtn" data-notr>🌐 <span id="langLbl">עברית</span></button></div>
+<div class="tvbtns" id="tvBtns"><button class="btn ghost" id="themeBtn">🎨 Colors</button><button class="btn ghost" id="fsBtn">⛶ Full screen</button><button class="btn ghost" id="musicBtn">🔊 Play music here</button><button class="btn ghost" id="langBtn" data-notr>🌐 <span id="langLbl">עברית</span></button></div>
 <div class="modal hidden" id="themeModal">
   <div class="modal-box">
     <h2 style="margin:0 0 4px">🎨 Colors</h2>
@@ -529,8 +538,8 @@ $('#codeIn').onkeydown = e => { if (e.key === 'Enter') watch($('#codeIn').value)
 $('#fsBtn').onclick = () => { (document.documentElement.requestFullscreen?.() || Promise.resolve()).catch(() => {}); };
 document.addEventListener('fullscreenchange', () => $('#fsBtn').classList.toggle('hidden', !!document.fullscreenElement));
 // the buttons fade away when the mouse/remote is idle, so they don't sit on the TV picture
-let idleT = null;
-function wakeButtons(){ $('#tvBtns').classList.remove('idle'); clearTimeout(idleT); idleT = setTimeout(() => { if ($('#themeModal').classList.contains('hidden')) $('#tvBtns').classList.add('idle'); }, 5000); }
+let idleT = null, spPlayer = null, musicState = 'off', musicT = null;
+function wakeButtons(){ $('#musicBox').classList.remove('idle'); $('#tvBtns').classList.remove('idle'); clearTimeout(idleT); idleT = setTimeout(() => { if ($('#themeModal').classList.contains('hidden')){ $('#tvBtns').classList.add('idle'); if (musicState === 'ready') $('#musicBox').classList.add('idle'); } }, 5000); }
 ['mousemove', 'keydown', 'touchstart', 'click'].forEach(ev => document.addEventListener(ev, wakeButtons));
 wakeButtons();
 let wake = null;
@@ -543,6 +552,10 @@ function render(){
   const link = joinLink();
   if (link !== lastJoin){ lastJoin = link; qrInto($('#lbQr'), link); qrInto($('#gmQr'), link); qrInto($('#bgQr'), link); }
   $('#lbCode').textContent = code; $('#gmCode').textContent = code; $('#bgCode').textContent = code;
+  const streamer = !!room.settings?.stream;
+  document.body.classList.toggle('streamer', streamer);
+  $('#lbJoinHint').textContent = streamer ? 'Join with the link in the chat, or open the site and enter the code' : 'Scan to join, or enter the code';
+  $('#streamSetup').classList.toggle('hidden', !streamer || musicState === 'ready');
   if (room.state === 'lobby') renderLobby(); else if (isBingo()) renderBingoTV(); else renderGame();
 }
 function renderLobby(){
@@ -759,9 +772,57 @@ setInterval(() => {
   const r = room?.round, el = $('#tbTimer'); if (!el) return;
   const on = room?.state === 'game' && isBingo() && r?.state === 'playing' && r.deadline;
   el.classList.toggle('hidden', !on); if (!on) return;
-  const left = Math.max(0, r.deadline - Date.now()), T = bTime() * 1000;
+  const left = Math.max(0, r.deadline - Date.now()), T = Math.max(1000, r.deadline - (r.started || 0)) || bTime() * 1000;
   el.querySelector('i').style.width = (left / T * 100).toFixed(1) + '%'; el.querySelector('span').textContent = Math.ceil(left / 1000) + ' s'; el.classList.toggle('low', left < 5000);
 }, 250);
+
+
+// ================= music in this window (for streaming: share this window with sound) =================
+const ls = k => { try { return localStorage.getItem(k); } catch(e){ return null; } };
+async function spToken(){
+  if (ls('access_token') && Date.now() < +(ls('expires_at') || 0)) return ls('access_token');
+  const rt = ls('refresh_token'), cid = ls('client_id');
+  if (rt && cid) try {
+    const t = await (await fetch('https://accounts.spotify.com/api/token', {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: new URLSearchParams({client_id: cid, grant_type: 'refresh_token', refresh_token: rt})})).json();
+    if (t.access_token){ localStorage.setItem('access_token', t.access_token); if (t.refresh_token) localStorage.setItem('refresh_token', t.refresh_token); localStorage.setItem('expires_at', String(Date.now() + (t.expires_in - 60) * 1000)); if (t.scope) localStorage.setItem('sp_scope', t.scope); return t.access_token; }
+  } catch(e){}
+  return ls('access_token');
+}
+const PLAN_B = 'Plan B: play the music in the Spotify app on this computer, share your <b>whole screen</b> with sound in Discord, and keep the Spotify window out of sight so the song name never shows.';
+function setMusic(state, html){
+  musicState = state; clearTimeout(musicT);
+  $('#musicBox').classList.remove('hidden');
+  $('#musicMsg').innerHTML = html;
+  $('#volRow').classList.toggle('hidden', state !== 'ready');
+  $('#musicBtn').textContent = state === 'ready' ? '🔊 Music: on' : state === 'loading' ? '🔊 Starting…' : '🔊 Play music here';
+  $('#streamSetup').classList.toggle('hidden', !room?.settings?.stream || state === 'ready');
+}
+async function startMusicHere(){
+  if (musicState === 'ready' || musicState === 'loading') return;
+  if (!ls('access_token')){ setMusic('err', 'Log in to Spotify on the <b>main page</b> in this browser first (same computer), then come back and click again.'); return; }
+  const sc = ls('sp_scope');
+  if (!sc || !/\bstreaming\b/.test(sc)){ setMusic('err', 'Spotify needs one more permission for this. On the main page in this browser: <b>Settings → Log out of Spotify</b>, then log in again, and click here once more.'); return; }
+  setMusic('loading', '🔊 Starting the music player…');
+  try {
+    if (!window.Spotify) await new Promise((ok, bad) => {
+      window.onSpotifyWebPlaybackSDKReady = ok;
+      const s = document.createElement('script'); s.src = 'https://sdk.scdn.co/spotify-player.js'; s.onerror = () => bad(new Error('load')); document.head.appendChild(s);
+      setTimeout(() => bad(new Error('timeout')), 15000);
+    });
+    spPlayer = new window.Spotify.Player({name: 'SongLine Stream', getOAuthToken: cb => { spToken().then(cb); }, volume: +$('#volR').value / 100});
+    spPlayer.addListener('ready', () => setMusic('ready', '🔊 <b>Music plays in this window.</b> On the host phone pick <b>SongLine Stream</b> as the device (it\'s picked by itself in streaming mode).'));
+    spPlayer.addListener('not_ready', () => setMusic('loading', '🔊 Reconnecting to Spotify…'));
+    spPlayer.addListener('initialization_error', () => setMusic('err', 'This browser can\'t play Spotify in a page. Try Chrome, Edge or Firefox on a computer. ' + PLAN_B));
+    spPlayer.addListener('authentication_error', () => setMusic('err', 'Spotify didn\'t accept the login. On the main page: <b>Settings → Log out of Spotify</b>, log in again, then click here once more.'));
+    spPlayer.addListener('account_error', () => setMusic('err', 'Playing in a browser needs <b>Spotify Premium</b> on the account that\'s logged in. ' + PLAN_B));
+    spPlayer.addListener('playback_error', e => setMusic('ready', '⚠ Spotify had trouble playing that song (' + esc(e?.message || 'error') + '). Try ⤼ Different song on the host phone.'));
+    try { spPlayer.activateElement?.(); } catch(e){}
+    spPlayer.connect();
+    musicT = setTimeout(() => { if (musicState === 'loading') setMusic('err', 'The Spotify player didn\'t start in this window (Spotify may not allow it for this app right now). ' + PLAN_B); }, 15000);
+  } catch(e){ setMusic('err', 'Couldn\'t load the Spotify player. ' + PLAN_B); }
+}
+$('#musicBtn').onclick = startMusicHere;
+$('#volR').oninput = e => { try { spPlayer?.setVolume(+e.target.value / 100); } catch(err){} };
 
 window.SongLineTV = {state: () => ({code, room})};
 start().catch(e => { $('#setupMsg').textContent = 'Couldn\'t connect: ' + e.message; });
