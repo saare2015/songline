@@ -2509,6 +2509,7 @@ async function bProcess(k, a){
     const c = +a.cell, card = bCard(ow);
     if (card[c] === +room.bingo.pending[ow] && !bMarks(ow)[c]){ upd[`bingo/marks/${ow}/${c}`] = true; upd[`bingo/pending/${ow}`] = null; upd[`round/results/${ow}/cell`] = c; }
   }
+  if (a.type === 'bnoerase' && r.state === 'revealed' && room.bingo?.erase?.[ow]) upd[`bingo/erase/${ow}`] = null;
   if (a.type === 'berase' && r.state === 'revealed' && room.bingo?.erase?.[ow] && a.target !== ow && bCard(a.target).length){
     const c = +a.cell;
     if (bMarks(a.target)[c] && bCard(a.target)[c] !== -1){
@@ -2535,7 +2536,15 @@ async function bFix(ow){
   }
   await fb.update(R(), upd);
 }
+// after a reveal, every player/team that won a square (or an erase) chooses before the next round
+const bOnline = ow => bMembers(ow).some(u => players()[u] && players()[u].online !== false);
+function bWaiting(){
+  if (room.round?.state !== 'revealed' || room.winner) return [];
+  const pend = Object.keys(room.bingo?.pending || {}), er = Object.keys(room.bingo?.erase || {});
+  return [...new Set([...pend, ...er])].filter(ow => bCard(ow).length && bOnline(ow));
+}
 async function bNext(){
+  if (bWaiting().length) return;
   const upd = {};
   for (const [ow, cat] of Object.entries(room.bingo?.pending || {})){       // place forgotten crosses automatically
     const c = bAutoCell(ow, +cat); if (c != null) upd[`bingo/marks/${ow}/${c}`] = true;
@@ -2642,7 +2651,9 @@ function renderBingo(){
     const res = r.results?.[myOw];
     status = !res ? '👀 Sudden death' : res.ok ? (bTeamsOn() ? '✅ Your team got it!' : '✅ You got it!') : '❌ Not this time';
     sub = pend != null ? `Tap a ${esc(cats[pend].name)} square on your card to cross it off.` : res?.ok && !tie.length && res.cell == null && !bFreeOf(myOw, r.cat).length ? `No ${esc(cat.name)} squares left on your card.` : '';
-    if (canErase) sub = (sub ? `<span>${sub}</span> ` : '') + '<span>💥 Exact year! You may erase one cross from another player: tap it below.</span>';
+    if (canErase) sub = (sub ? `<span>${sub}</span> ` : '') + '<span>💥 Exact year! You may erase one cross from another player: tap it below.</span> <button class="linkbtn" id="bNoErase">No thanks</button>';
+    const waitOthers = bWaiting().filter(o => o !== myOw);
+    if (pend == null && !canErase && waitOthers.length) sub = (sub ? sub + ' ' : '') + `<span>⏳ Waiting for ${waitOthers.map(o => esc(bOwnerName(o))).join(', ')} to choose…</span>`;
     if (tie.length) sub = r.sd ? 'Nobody in the sudden death got it. Another song!' : '⚔ Sudden death starts with the next song!';
     if (!sub) sub = host ? '' : 'Waiting for the host to start the next round…';
   }
@@ -2689,6 +2700,9 @@ function renderBingo(){
     $('#hostNow').textContent = st === 'revealed' && rc ? `${rc.n} (${rc.y})` : 'Mystery song playing';
     $('#bRevealBtn').classList.toggle('hidden', st !== 'playing');
     $('#bNextBtn').classList.toggle('hidden', st !== 'revealed' || !!w);
+    const wait = bWaiting();
+    $('#bNextBtn').disabled = wait.length > 0;
+    $('#bNextBtn').textContent = wait.length ? `⏳ Waiting for ${wait.map(bOwnerName).join(', ')}…` : 'Next round ▶';
     $('#bFixList').innerHTML = st === 'revealed' ? `<div class="muted" style="margin-bottom:6px">Answers (tap to fix a verdict):</div>` + Object.keys(r.results || {}).map(ow => { const x = r.results[ow] || {}; return `<button class="bfix ${x.ok ? 'ok' : 'bad'}" data-bfix="${ow}">${x.ok ? '✅' : '❌'} <b dir="auto">${esc(bOwnerName(ow))}</b>: <span dir="auto">${esc(bVal(cat, x.v))}</span></button>`; }).join('') : '';
   }
   // alerts
@@ -2716,6 +2730,7 @@ $('#bAnswer').addEventListener('keydown', e => { if (e.key === 'Enter' && e.targ
 $('#bSpinMe').onclick = () => { if (isHost()) bSpin(active()); else sendAction({type: 'bspin'}); };
 $('#bRevealBtn').onclick = () => bReveal();
 $('#bNextBtn').onclick = () => bNext();
+document.addEventListener('click', e => { if (e.target.id === 'bNoErase') sendAction({type: 'bnoerase'}); });
 $('#bEndBtn').onclick = () => { if (confirm('End this game and go back to the lobby? Bingo cards will be cleared.')) backToLobby(); };
 $('#bMyCard').onclick = e => { const c = e.target.closest('[data-bmark]'); if (c) sendAction({type: 'bmark', cell: +c.dataset.bmark}); };
 $('#bOthers').onclick = e => { const c = e.target.closest('[data-berase]'); if (c && confirm(`Erase this cross from ${bOwnerName(c.dataset.bu)}'s card?`)) sendAction({type: 'berase', target: c.dataset.bu, cell: +c.dataset.berase}); };
