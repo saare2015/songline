@@ -614,21 +614,76 @@ function avatar(p, size = '28px', extra = ''){
   const inner = avOk(pic) ? `<img src="${pic}" alt="">` : avSvg(String(pic || '').startsWith('s:') ? pic.slice(2) : 0, p?.color);
   return `<span class="av ${extra}" style="--av:${size}">${inner}</span>`;
 }
-// shrink a photo to a 128 px square (centre crop) so it fits in the room data
+// pick a photo, then let the player move / zoom / rotate it inside the circle before saving a 128 px square
 function avFromFile(file){
   return new Promise((ok, bad) => {
-    const img = new Image(), url = URL.createObjectURL(file);
-    img.onload = () => {
-      const c = document.createElement('canvas'); c.width = c.height = 128;
-      const s = Math.min(img.width, img.height), g = c.getContext('2d');
-      g.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, 128, 128);
-      URL.revokeObjectURL(url);
-      let q = .8, out = c.toDataURL('image/jpeg', q);
-      while (out.length > 40000 && q > .3){ q -= .15; out = c.toDataURL('image/jpeg', q); }
-      ok(out);
-    };
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => avCrop(img, url, ok, bad);
     img.onerror = () => { URL.revokeObjectURL(url); bad(new Error('not an image')); };
     img.src = url;
+  });
+}
+function avCrop(img, url, ok, bad){
+  if (!document.getElementById('cropCss')){
+    const st = document.createElement('style'); st.id = 'cropCss';
+    st.textContent = `.crop-ov{position:fixed;inset:0;z-index:60;background:rgba(8,6,14,.88);display:flex;align-items:center;justify-content:center;padding:16px}
+.crop-box{background:var(--panel,#1e1b2e);border:1px solid var(--line,#333);border-radius:20px;padding:18px;width:100%;max-width:340px;text-align:center;color:var(--text,#fff)}
+.crop-box h2{margin:0 0 12px;font-size:20px}
+.crop-view{position:relative;margin:0 auto;overflow:hidden;border-radius:16px;background:#000;touch-action:none;cursor:grab;user-select:none}
+.crop-view:active{cursor:grabbing}
+.crop-view img{position:absolute;left:50%;top:50%;max-width:none;transform-origin:center;pointer-events:none}
+.crop-ring{position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 999px rgba(0,0,0,.55);outline:2px solid rgba(255,255,255,.85);outline-offset:-2px;pointer-events:none}
+.crop-zoom{width:100%;margin:14px 0 4px;accent-color:var(--accent,#ff3d8b)}
+.crop-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+.crop-tip{font-size:12px;color:var(--muted,#aaa);margin:6px 0 0}`;
+    document.head.appendChild(st);
+  }
+  const V = Math.min(260, window.innerWidth - 80);
+  let z = 1, x = 0, y = 0, rot = 0;
+  const ov = document.createElement('div'); ov.className = 'crop-ov';
+  ov.innerHTML = `<div class="crop-box" role="dialog" aria-label="Crop your picture"><h2>Crop your picture</h2>
+    <div class="crop-view" style="width:${V}px;height:${V}px"><img src="${url}" alt="" draggable="false" style="width:${img.naturalWidth}px;height:${img.naturalHeight}px"><div class="crop-ring"></div></div>
+    <input type="range" class="crop-zoom" min="1" max="5" step="0.01" value="1" aria-label="Zoom">
+    <p class="crop-tip">Drag to move · pinch, scroll or slide to zoom</p>
+    <div class="crop-row"><button class="btn secondary sm" data-c="rot">⟳ Rotate</button><button class="btn ghost sm" data-c="cancel">Cancel</button><button class="btn sm" data-c="ok">✓ Use this picture</button></div></div>`;
+  document.body.appendChild(ov);
+  const view = ov.querySelector('.crop-view'), im = ov.querySelector('img'), zr = ov.querySelector('.crop-zoom');
+  const dims = () => rot % 180 ? [img.naturalHeight, img.naturalWidth] : [img.naturalWidth, img.naturalHeight];
+  const base = () => { const [w, h] = dims(); return V / Math.min(w, h); };          // zoom 1 = the picture just covers the circle
+  function clamp(){
+    const [w, h] = dims(), s = base() * z, mx = Math.max(0, (w * s - V) / 2), my = Math.max(0, (h * s - V) / 2);
+    x = Math.max(-mx, Math.min(mx, x)); y = Math.max(-my, Math.min(my, y));
+  }
+  function draw(){ clamp(); im.style.transform = `translate(-50%,-50%) translate(${x}px,${y}px) rotate(${rot}deg) scale(${base() * z})`; zr.value = z; }
+  const zoomTo = nz => { nz = Math.max(1, Math.min(5, nz)); x *= nz / z; y *= nz / z; z = nz; draw(); };
+  draw();
+  // drag with one finger / the mouse, pinch with two fingers
+  const pts = new Map(); let last = null, pinch = null;
+  view.addEventListener('pointerdown', e => { view.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]); last = [e.clientX, e.clientY]; if (pts.size === 2){ const [a, b] = [...pts.values()]; pinch = {d: Math.hypot(a[0] - b[0], a[1] - b[1]), z}; } });
+  view.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId)) return;
+    pts.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pts.size >= 2 && pinch){ const [a, b] = [...pts.values()]; zoomTo(pinch.z * Math.hypot(a[0] - b[0], a[1] - b[1]) / pinch.d); return; }
+    x += e.clientX - last[0]; y += e.clientY - last[1]; last = [e.clientX, e.clientY]; draw();
+  });
+  const up = e => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; const r = [...pts.values()][0]; if (r) last = r; };
+  view.addEventListener('pointerup', up); view.addEventListener('pointercancel', up);
+  view.addEventListener('wheel', e => { e.preventDefault(); zoomTo(z * (e.deltaY < 0 ? 1.08 : 1 / 1.08)); }, {passive: false});
+  zr.addEventListener('input', () => zoomTo(+zr.value));
+  const close = () => { ov.remove(); URL.revokeObjectURL(url); };
+  ov.addEventListener('click', e => {
+    const c = e.target.closest('[data-c]')?.dataset.c;
+    if (c === 'rot'){ rot = (rot + 90) % 360; x = y = 0; draw(); }
+    else if (c === 'cancel' || e.target === ov){ close(); bad(new Error('cancel')); }
+    else if (c === 'ok'){
+      const S = 128, k = S / V, cv = document.createElement('canvas'); cv.width = cv.height = S;
+      const g = cv.getContext('2d'); g.imageSmoothingQuality = 'high';
+      g.translate(S / 2 + x * k, S / 2 + y * k); g.rotate(rot * Math.PI / 180); g.scale(base() * z * k, base() * z * k);
+      g.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+      let q = .85, out = cv.toDataURL('image/jpeg', q);
+      while (out.length > 40000 && q > .3){ q -= .15; out = cv.toDataURL('image/jpeg', q); }
+      close(); ok(out);
+    }
   });
 }
 const PCOL = ['#ff3d8b', '#38d9f0', '#f59e0b', '#22c55e', '#8b5cf6', '#ef4444', '#14b8a6', '#eab308'];
@@ -1008,7 +1063,7 @@ function setLocalPic(v){ draft.pics[avIdx] = v; renderAvModal(); renderPlayers()
 $('#avGrid').onclick = e => { const b = e.target.closest('[data-av]'); if (b) setLocalPic(b.dataset.av); };
 $('#avFile').onchange = async e => {
   const f = e.target.files?.[0]; e.target.value = ''; if (!f) return;
-  try { setLocalPic(await avFromFile(f)); } catch(err){ alert('That file isn\'t a picture'); }
+  try { setLocalPic(await avFromFile(f)); } catch(err){ if (err.message !== 'cancel') alert('That file isn\'t a picture'); }
 };
 $('#avDone').onclick = () => closeM('avModal');
 $('#pAdd').onclick = () => { draft.names.push(''); draft.pics.push('s:' + ((draft.names.length - 1) % 8)); renderPlayers(); const ins = $$('#pList input'); ins[ins.length - 1].focus(); };
