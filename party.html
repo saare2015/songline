@@ -155,6 +155,10 @@ html[dir=rtl] .btimer i{inset:0 0 0 auto}
 .bteamnames{display:flex;flex-direction:column;gap:6px;margin-top:6px}
 .tname{display:flex;align-items:center;gap:8px}.tname i{width:14px;height:14px;border-radius:50%;background:var(--tc);flex:none}.tname .inp{flex:1;min-width:0;padding:8px 10px}.tname .muted{font-size:12px;white-space:nowrap}
 .tchip{border:0;border-radius:99px;padding:3px 10px;font:inherit;font-size:12px;font-weight:800;background:var(--tc);color:#14121c;cursor:pointer;white-space:nowrap}
+.blocks{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:6px 0 10px}
+.blocks .lk{display:inline-flex;align-items:center;gap:5px;border-radius:99px;padding:3px 10px 3px 4px;font-size:13px;font-weight:700;background:var(--btn2);border:1.5px solid transparent}
+.blocks .lk.done{border-color:var(--ok)}.blocks .lk.wait{border-color:#fbbf24;animation:lkpulse 1.4s ease-in-out infinite}.blocks .lk.off{opacity:.55}
+@keyframes lkpulse{50%{opacity:.6}}
 .modepick{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
 .modepick label{background:var(--btn2);border:2px solid transparent;border-radius:12px;padding:10px;cursor:pointer;font-weight:700}
 .modepick label:has(input:checked){border-color:var(--accent)}
@@ -466,6 +470,7 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
     <div class="status" id="bStatus"></div>
     <div class="sub" id="bSub"></div>
     <div class="btimer hidden" id="bTimer"><i></i><span></span></div>
+    <div class="blocks hidden" id="bLocks"></div>
     <button class="btn big hidden" id="bSpinMe" style="width:100%;margin:8px 0">🎲 Spin the category</button>
     <div class="panel hidden" id="bAnswer"></div>
     <div id="bResult"></div>
@@ -2658,6 +2663,20 @@ function renderBingo(){
     if (!sub) sub = host ? '' : 'Waiting for the host to start the next round…';
   }
   $('#bStatus').innerHTML = status; $('#bSub').innerHTML = sub;
+  // who has locked in: answers while the song plays, squares/erases after the reveal
+  let locks = [];
+  const chip = (ow, cls, mark, tip) => `<span class="lk ${cls}" title="${esc(tip)}">${bOwnerHead(ow, '18px')} ${mark}</span>`;
+  if (!w && r.state === 'playing'){
+    const ans = room.bingo?.answers || {};
+    locks = bPlaying().map(ow => ans[ow] ? chip(ow, 'done', '🔒', 'locked in') : chip(ow, bOnline(ow) ? 'wait' : 'wait off', '⏳', 'still answering'));
+  } else if (!w && r.state === 'revealed' && !tie.length){
+    const wait = new Set(Object.keys(room.bingo?.pending || {}).concat(Object.keys(room.bingo?.erase || {})));
+    const won = Object.keys(r.results || {}).filter(ow => r.results[ow].ok || r.results[ow].ex || wait.has(ow));
+    const sq = ow => room.bingo?.pending?.[ow] != null;
+    locks = won.map(ow => !wait.has(ow) ? chip(ow, 'done', '✓', 'done') : !bOnline(ow) ? chip(ow, 'wait off', '📴', 'offline: placed automatically') : sq(ow) ? chip(ow, 'wait', '⏳', 'picking a square') : chip(ow, 'wait', '💥', 'deciding on the erase'));
+  }
+  $('#bLocks').innerHTML = locks.join('');
+  $('#bLocks').classList.toggle('hidden', !locks.length);
   // spin button (whoever's turn it is, or the host)
   $('#bSpinMe').classList.toggle('hidden', !(r.state === 'idle' && !w && (act === me || host)));
   $('#bSpinMe').textContent = act === me ? '🎲 Spin the category' : `🎲 Spin for ${pname(act)}`;

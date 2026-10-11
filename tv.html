@@ -745,7 +745,8 @@ function renderBingoTV(){
   $('#tbStatus').innerHTML = status; $('#tbSub').innerHTML = sub;
   // cards
   $('#tbCards').innerHTML = owners.map(ow => { const x = r.results?.[ow], [h, n] = bProgress(ow);
-    const res = r.state === 'revealed' && x ? `<div class="res ${x.ok ? 'ok' : 'bad'}" dir="auto">${x.ok ? '✅' : '❌'} ${esc(bVal(cat, x.v))}${x.ex ? ' 💯' : ''}</div>` : r.state === 'playing' && (!tie.length || tie.includes(ow)) ? `<div class="res">${room.bingo?.answers?.[ow] ? '✓ answered' : '…'}</div>` : '';
+    const choosing = r.state === 'revealed' && !w && (room.bingo?.pending?.[ow] != null || room.bingo?.erase?.[ow]);
+    const res = r.state === 'revealed' && x ? `<div class="res ${x.ok ? 'ok' : 'bad'}" dir="auto">${x.ok ? '✅' : '❌'} ${esc(bVal(cat, x.v))}${x.ex ? ' 💯' : ''}${choosing ? ' · ⏳ choosing…' : ''}</div>` : r.state === 'playing' && (!tie.length || tie.includes(ow)) ? `<div class="res">${room.bingo?.answers?.[ow] ? '✓ answered' : '…'}</div>` : '';
     return `<div class="bpl ${bMembers(ow).includes(act) && !w ? 'turn' : ''} ${tie.includes(ow) ? 'tie' : ''}" style="--pc:${bOwnerColor(ow)}"><div class="nm">${bOwnerHead(ow, '2.2vw')}<span class="muted">${h}/${n}</span></div>${bCardHtml(ow)}${res}</div>`; }).join('');
   const rows = owners.length <= 4 ? 1 : owners.length <= 10 ? 2 : 3, cols = Math.ceil(Math.max(1, owners.length) / rows);   // every card fits on screen
   $('#tbCards').style.gridTemplateColumns = `repeat(${cols}, min(calc((100vw - 4vw) / ${cols} - 1.4vw), calc((100vh - 21vw) / ${rows} - 7vw)))`;
