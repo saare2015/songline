@@ -96,7 +96,10 @@ html[lang=he] .chip.me b::after{content:" (את/ה)"}
 
 /* timeline */
 .tl{display:flex;flex-direction:column;gap:6px}
-.tcard{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:12px;padding:10px 12px}
+.tcard{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:12px;padding:10px 12px;border-inline-start:5px solid var(--oc,transparent)}
+#tl .tcard:not(.mystery):not(.wrong){background:color-mix(in srgb,var(--oc,transparent) 9%,var(--card))}
+.panel.other{border-color:var(--oc)!important;box-shadow:0 0 0 1px var(--oc) inset}
+.odot{display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--oc,var(--muted));margin-inline-end:6px;vertical-align:middle}
 .tcard .y{font-weight:900;font-size:22px;color:var(--accent2);min-width:58px}
 .tcard .t{font-weight:700;font-size:14px;line-height:1.2}
 .tcard .a{color:var(--muted);font-size:13px}
@@ -583,7 +586,7 @@ body.anim .status.pulse{animation:pulse .45s ease 3}
     <!-- timeline -->
     <div class="panel">
       <div class="tl-head">
-        <b>Timeline</b>
+        <b id="tlOwner">Timeline</b>
         <select class="inp" id="viewSel"></select>
         <button class="mini" id="layoutBtn" title="Switch between list and table view"></button>
       </div>
@@ -777,7 +780,20 @@ const bOwners = () => bTeamsOn() ? [...new Set(order().map(bOwnerOf).filter(Bool
 const bMembers = ow => String(ow).startsWith('t') && bTeamsOn() ? order().filter(u => bOwnerOf(u) === ow) : [ow];
 const bTeam = ow => { const k = +String(ow).slice(1) || 0; return {name: bTeamName(k), c: (BTEAMS[k] || BTEAMS[0]).c}; };
 const bOwnerName = ow => String(ow).startsWith('t') && bTeamsOn() ? bTeam(ow).name : pname(ow);
-const bOwnerColor = ow => String(ow).startsWith('t') && bTeamsOn() ? bTeam(ow).c : (/^#[0-9a-f]{6}$/i.test(players()[ow]?.color || '') ? players()[ow].color : 'transparent');
+// every player gets their own colour (their chosen colour unless someone who joined earlier already has it)
+const PCOLS = ['#ff4f9a', '#3fd7f2', '#f7c531', '#3ddc84', '#b38cff', '#ff8a3d', '#5b8cff', '#e5e7eb', '#2dd4bf', '#f472b6', '#a3e635', '#fb7185'];
+function pcolMap(){
+  const ps = Object.entries(players()).sort((a, b) => (a[1].joined || 0) - (b[1].joined || 0)), used = new Set(), m = {};
+  for (const [u, p] of ps){
+    let c = /^#[0-9a-f]{6}$/i.test(p.color || '') ? p.color.toLowerCase() : null;
+    if (!c || [...used].some(x => colorNear(x, c))) c = PCOLS.find(x => ![...used].some(y => colorNear(y, x))) || c || '#888888';
+    used.add(c); m[u] = c;
+  }
+  return m;
+}
+function colorNear(a, b){ const h = s => [1, 3, 5].map(i => parseInt(s.slice(i, i + 2), 16)); const [x, y] = [h(a), h(b)]; return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]) < 60; }
+const pcol = u => pcolMap()[u] || 'transparent';
+const bOwnerColor = ow => String(ow).startsWith('t') && bTeamsOn() ? bTeam(ow).c : pcol(ow);
 const bCard = ow => barr(room?.bingo?.cards?.[ow]).map(x => x == null ? -1 : +x);
 const bMarks = ow => room?.bingo?.marks?.[ow] || {};
 const bIsOn = (card, marks, i) => card[i] === -1 || !!marks[i];
@@ -1639,7 +1655,7 @@ function renderGame(){
   // scoreboard
   $('#score').innerHTML = o.map(u => {
     const p = players()[u];
-    return `<button class="chip ${u === act ? 'turn' : ''} ${u === me ? 'me' : ''}" data-p="${u}" style="--pc:${/^#[0-9a-f]{6}$/i.test(p.color || '') ? p.color : 'transparent'}"><b>${avatar(p, '22px')}<span class="dot ${p.online === false ? 'off' : ''}"></span>${esc(p.name)}${u === room.host ? ' 👑' : ''}</b><span>🃏 ${timeline(u).length}/${target} · 🪙 ${tok(u)}</span></button>`;
+    return `<button class="chip ${u === act ? 'turn' : ''} ${u === me ? 'me' : ''}" data-p="${u}" style="--pc:${pcol(u)}"><b>${avatar(p, '22px')}<span class="dot ${p.online === false ? 'off' : ''}"></span>${esc(p.name)}${u === room.host ? ' 👑' : ''}</b><span>🃏 ${timeline(u).length}/${target} · 🪙 ${tok(u)}</span></button>`;
   }).join('');
   // winner
   $('#winner').classList.toggle('hidden', !w);
@@ -1774,7 +1790,11 @@ function renderTimeline(uid, round, pl, ch, animNow){
   $('#tl').classList.toggle('h', horiz);
   $('#layoutBtn').textContent = horiz ? '☰' : '🃏';
   const cards = timeline(uid);
-  const isTurn = round.player === uid;
+  const isTurn = round.player === uid, oc = pcol(uid);
+  $('#tl').style.setProperty('--oc', oc);
+  $('#tl').closest('.panel').style.setProperty('--oc', oc);
+  $('#tl').closest('.panel').classList.toggle('other', uid !== me);
+  $('#tlOwner').innerHTML = uid === me ? `<span class="odot"></span>Your timeline` : `<span class="odot"></span>${esc(pname(uid))}'s timeline`;
   const placing = round.state === 'playing' && isTurn;
   const canPlace = placing && uid === me;
   const challenge = round.state === 'challenge' && isTurn;

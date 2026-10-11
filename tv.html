@@ -70,7 +70,7 @@ body{font-size:1.15vw}
 .tltitle{font-size:1.4vw;color:var(--muted);margin-bottom:.8vw;font-weight:700}
 .tl{display:flex;gap:1vw;align-items:stretch;overflow:hidden;padding:1vw .2vw;flex-wrap:nowrap;perspective:1200px}
 .tl.wrap{flex-wrap:wrap;overflow:visible}
-.card{--cw:11vw;width:var(--cw);min-width:var(--cw);background:var(--card);border-radius:1vw;padding:.7vw;display:flex;flex-direction:column;gap:.35vw;text-align:center;position:relative}
+.card{--cw:11vw;width:var(--cw);min-width:var(--cw);background:color-mix(in srgb,var(--oc,transparent) 10%,var(--card));border-top:.35vw solid var(--oc,transparent);border-radius:1vw;padding:.7vw;display:flex;flex-direction:column;gap:.35vw;text-align:center;position:relative}
 .card img,.card .nocv{width:100%;aspect-ratio:1;object-fit:cover;border-radius:.6vw;background:#000}
 .card .nocv{display:flex;align-items:center;justify-content:center;font-size:4vw;background:var(--line)}
 .card .y{font-weight:900;font-size:calc(var(--cw)*.2);color:var(--accent2);line-height:1}
@@ -315,7 +315,20 @@ const bOwners = () => bTeamsOn() ? [...new Set(order().map(bOwnerOf).filter(Bool
 const bMembers = ow => String(ow).startsWith('t') && bTeamsOn() ? order().filter(u => bOwnerOf(u) === ow) : [ow];
 const bTeam = ow => { const k = +String(ow).slice(1) || 0; return {name: bTeamName(k), c: (BTEAMS[k] || BTEAMS[0]).c}; };
 const bOwnerName = ow => String(ow).startsWith('t') && bTeamsOn() ? bTeam(ow).name : pname(ow);
-const bOwnerColor = ow => String(ow).startsWith('t') && bTeamsOn() ? bTeam(ow).c : (/^#[0-9a-f]{6}$/i.test(players()[ow]?.color || '') ? players()[ow].color : 'transparent');
+// every player gets their own colour (their chosen colour unless someone who joined earlier already has it)
+const PCOLS = ['#ff4f9a', '#3fd7f2', '#f7c531', '#3ddc84', '#b38cff', '#ff8a3d', '#5b8cff', '#e5e7eb', '#2dd4bf', '#f472b6', '#a3e635', '#fb7185'];
+function pcolMap(){
+  const ps = Object.entries(players()).sort((a, b) => (a[1].joined || 0) - (b[1].joined || 0)), used = new Set(), m = {};
+  for (const [u, p] of ps){
+    let c = /^#[0-9a-f]{6}$/i.test(p.color || '') ? p.color.toLowerCase() : null;
+    if (!c || [...used].some(x => colorNear(x, c))) c = PCOLS.find(x => ![...used].some(y => colorNear(y, x))) || c || '#888888';
+    used.add(c); m[u] = c;
+  }
+  return m;
+}
+function colorNear(a, b){ const h = s => [1, 3, 5].map(i => parseInt(s.slice(i, i + 2), 16)); const [x, y] = [h(a), h(b)]; return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]) < 60; }
+const pcol = u => pcolMap()[u] || 'transparent';
+const bOwnerColor = ow => String(ow).startsWith('t') && bTeamsOn() ? bTeam(ow).c : pcol(ow);
 const bCard = ow => barr(room?.bingo?.cards?.[ow]).map(x => x == null ? -1 : +x);
 const bMarks = ow => room?.bingo?.marks?.[ow] || {};
 const bIsOn = (card, marks, i) => card[i] === -1 || !!marks[i];
@@ -491,7 +504,7 @@ const players = () => room?.players || {};
 const order = () => arr(room?.order).filter(u => players()[u]);
 const active = () => { const o = order(); return o.length ? o[(room.turn || 0) % o.length] : null; };
 const pname = u => players()[u]?.name || '?';
-const pcolor = u => /^#[0-9a-f]{6}$/i.test(players()[u]?.color || '') ? players()[u].color : 'var(--line)';
+const pcolor = u => pcolMap()[u] || 'var(--line)';
 const tok = u => room?.tokens?.[u] ?? 0;
 const timeline = u => Object.entries(room?.timelines?.[u] || {}).map(([k, c]) => ({k, ...c})).sort((a, b) => (+a.y - +b.y) || String(a.n).localeCompare(String(b.n)));
 const $$ = s => [...document.querySelectorAll(s)];
@@ -628,7 +641,7 @@ function renderTimeline(uid, round, pl, ch){
     else if (placing){ const b = bets(i); html += `<div class="gap ${b.length ? 'bet' : ''}">${b.length ? `<span class="who">🕵 ${esc(b.join(', '))}</span>` : ''}</div>`; }
     if (i < cards.length) html += dec(cards[i]) + cardHtml(cards[i], round.state === 'revealed' && cards[i].k === round.cardKey && round.owner === uid ? 'new' : '');
   }
-  $('#tlArea').innerHTML = `<div class="tl" id="tl" style="--cw:${cardW(cards.length + (placing ? 1 : 0))}">${html}</div>`;
+  $('#tlArea').innerHTML = `<div class="tl" id="tl" style="--cw:${cardW(cards.length + (placing ? 1 : 0))};--oc:${pcolor(uid)}">${html}</div>`;
   $$('#tl .card').forEach(c => c.style.setProperty('--cw', cardW(cards.length + (placing ? 1 : 0))));
   // keep the action in view on long timelines
   const tl = $('#tl'), focus = tl.querySelector('.mystery, .new, .wrong');
@@ -652,7 +665,7 @@ function drawOverview(){
     const u = o[step], cards = timeline(u);
     $('#tlTitle').innerHTML = `<span style="color:${pcolor(u)}">●</span> ${esc(pname(u))}'s timeline · ${cards.length} card${cards.length === 1 ? '' : 's'}`;
     let last = null;
-    $('#tlArea').innerHTML = `<div class="tl" id="tl">${cards.map(c => { const d = decadeOf(c.y), m = d && d !== last ? `<div class="decade">${d}</div>` : ''; last = d; return m + cardHtml(c); }).join('') || '<div class="muted" style="font-size:1.6vw">No cards yet</div>'}</div>`;
+    $('#tlArea').innerHTML = `<div class="tl" id="tl" style="--oc:${pcolor(u)}">${cards.map(c => { const d = decadeOf(c.y), m = d && d !== last ? `<div class="decade">${d}</div>` : ''; last = d; return m + cardHtml(c); }).join('') || '<div class="muted" style="font-size:1.6vw">No cards yet</div>'}</div>`;
     $$('#tl .card').forEach(c => c.style.setProperty('--cw', cardW(cards.length)));
   }
 }
